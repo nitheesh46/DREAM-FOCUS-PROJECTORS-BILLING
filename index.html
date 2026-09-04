@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DREAM FOCUS PROJECTORS - React Order & Billing System</title>
+  <title>DREAM FOCUS PROJECTORS - Billing & Deep Financial Analytics</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React 18 & ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel for in-browser JSX -->
+  <!-- Babel Compiler -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- HTML2PDF Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -30,7 +30,7 @@
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
 
-// --- Vector Components ---
+// --- Vector Logos & Stamps ---
 const ProjectorLogo = () => (
   <svg className="w-12 h-12 flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="100" height="100" rx="20" fill="#0284C7"/>
@@ -68,7 +68,31 @@ const DigitalSignature = () => (
   </div>
 );
 
-// --- Main Application ---
+// --- Sample Seed Data to Ensure Deep Analytics Works Immediately ---
+const SEED_DATA = [
+  {
+    invNo: "DFP/2026/1012", date: "2026-08-05", custName: "Rajesh Kumar", custPhone: "9842100001", custAddr: "Anna Nagar, Madurai",
+    paymentStatus: "Full Paid", paymentMode: "GPay / PhonePe UPI",
+    items: [{ id: 1, desc: "Epson EB-X41 Pre-Owned Projector", category: "Sales Unit", qty: 1, rate: 14000 }],
+    grossTotal: 14000, discount: 500, exchange: 0, taxableAmount: 13500, gstRate: 18, cgst: 1215, sgst: 1215, totalTax: 2430, netPayable: 15930, paid: 15930, pending: 0
+  },
+  {
+    invNo: "DFP/2026/1045", date: "2026-08-14", custName: "Velmurugan Arts College", custPhone: "9842100002", custAddr: "Sellur, Madurai",
+    paymentStatus: "Advance Paid", paymentMode: "Bank Transfer / NEFT",
+    items: [
+      { id: 1, desc: "Sony Laser Venue Projector (5000 Lumens)", category: "Sales Unit", qty: 1, rate: 22000 },
+      { id: 2, desc: "Optical Prism Alignment & Deep Cleaning", category: "Service", qty: 1, rate: 1800 }
+    ],
+    grossTotal: 23800, discount: 1000, exchange: 2000, taxableAmount: 20800, gstRate: 18, cgst: 1872, sgst: 1872, totalTax: 3744, netPayable: 24544, paid: 10000, pending: 14544
+  },
+  {
+    invNo: "DFP/2026/1089", date: "2026-09-02", custName: "Senthil Nathan", custPhone: "9842100003", custAddr: "KK Nagar, Madurai",
+    paymentStatus: "Full Paid", paymentMode: "Cash",
+    items: [{ id: 1, desc: "Motherboard Chip-level Ballast Repair", category: "Service", qty: 1, rate: 3500 }],
+    grossTotal: 3500, discount: 0, exchange: 0, taxableAmount: 3500, gstRate: 18, cgst: 315, sgst: 315, totalTax: 630, netPayable: 4130, paid: 4130, pending: 0
+  }
+];
+
 function App() {
   const [tab, setTab] = useState('create');
   const invoiceRef = useRef(null);
@@ -80,47 +104,82 @@ function App() {
     custName: '',
     custPhone: '',
     custAddr: '',
+    custGstin: '',
+    shopGstin: '33AABFD1234F1Z5',
     paymentStatus: 'Advance Paid',
     paymentMode: 'GPay / PhonePe UPI'
   });
 
   const [items, setItems] = useState([
     { id: 1, desc: 'Epson EB-X41 Pre-Owned 3LCD Projector (3600 Lumens)', category: 'Sales Unit', qty: 1, rate: 14500 },
-    { id: 2, desc: 'Original Remote Control + High Quality HDMI Cable Kit', category: 'Accessory', qty: 1, rate: 0 }
+    { id: 2, desc: 'Optical Prism Deep Cleaning & Alignment', category: 'Service', qty: 1, rate: 1200 }
   ]);
 
-  const [pricing, setPricing] = useState({ discount: 500, exchange: 1000, advance: 5000 });
-  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('DFP_REACT_BILLS') || '[]'));
-  const [selectedYear, setSelectedYear] = useState('2026');
+  // Pricing State including GST Rate
+  const [pricing, setPricing] = useState({
+    discount: 500,
+    exchange: 1000,
+    gstRate: 18, // 0, 5, 12, 18, 28%
+    advance: 5000
+  });
 
-  // Sync to LocalStorage
+  // LocalStorage Database Persistence
+  const [history, setHistory] = useState(() => {
+    const saved = localStorage.getItem('DFP_REACT_BILLS_V4');
+    return saved ? JSON.parse(saved) : SEED_DATA;
+  });
+
+  // Deep Analytics Filter States
+  const [analyticsYear, setAnalyticsYear] = useState('2026');
+  const [analyticsMonth, setAnalyticsMonth] = useState('ALL');
+
   useEffect(() => {
-    localStorage.setItem('DFP_REACT_BILLS', JSON.stringify(history));
+    localStorage.setItem('DFP_REACT_BILLS_V4', JSON.stringify(history));
   }, [history]);
 
-  // Dynamic Calculations
-  const grossTotal = useMemo(() => items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.rate) || 0), 0), [items]);
-  const netPayable = useMemo(() => Math.max(0, grossTotal - (Number(pricing.discount) || 0) - (Number(pricing.exchange) || 0)), [grossTotal, pricing.discount, pricing.exchange]);
-  
-  // Pending calculation: correctly checks numeric paid amount
+  // --- Calculations ---
+  const grossTotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.rate) || 0), 0);
+  }, [items]);
+
+  const taxableAmount = useMemo(() => {
+    return Math.max(0, grossTotal - (Number(pricing.discount) || 0) - (Number(pricing.exchange) || 0));
+  }, [grossTotal, pricing.discount, pricing.exchange]);
+
+  // GST Breakdown: Half to CGST, Half to SGST (Intra-state Tamil Nadu)
+  const gstBreakdown = useMemo(() => {
+    const rate = Number(pricing.gstRate) || 0;
+    const totalTax = (taxableAmount * rate) / 100;
+    const cgst = totalTax / 2;
+    const sgst = totalTax / 2;
+    return {
+      rate,
+      cgst,
+      sgst,
+      totalTax,
+      netPayable: Math.round(taxableAmount + totalTax)
+    };
+  }, [taxableAmount, pricing.gstRate]);
+
+  // Pending balance based on Net Payable (including GST)
   const pendingDue = useMemo(() => {
     const paidVal = pricing.advance === '' ? 0 : Number(pricing.advance);
-    return Math.max(0, netPayable - paidVal);
-  }, [netPayable, pricing.advance]);
+    return Math.max(0, gstBreakdown.netPayable - paidVal);
+  }, [gstBreakdown.netPayable, pricing.advance]);
 
-  // Handle status changes cleanly & auto-sync payment values
+  // Status and Full-Pay Sync
   const handleStatusChange = (status) => {
     setBillMeta(prev => ({ ...prev, paymentStatus: status }));
     if (status === 'Full Paid') {
-      setPricing(prev => ({ ...prev, advance: netPayable }));
+      setPricing(prev => ({ ...prev, advance: gstBreakdown.netPayable }));
     } else if (status === 'Pending (Zero Advance)') {
       setPricing(prev => ({ ...prev, advance: 0 }));
     }
   };
 
-  const handleSetFullPayment = () => {
+  const handlePayFull = () => {
     setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
-    setPricing(prev => ({ ...prev, advance: netPayable }));
+    setPricing(prev => ({ ...prev, advance: gstBreakdown.netPayable }));
   };
 
   // Item List Handlers
@@ -128,15 +187,20 @@ function App() {
   const removeItem = (id) => setItems(items.filter(i => i.id !== id));
   const updateItem = (id, field, val) => setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
 
-  // Save Order Record
+  // Save Order Record into Local Database
   const saveCurrentOrder = () => {
     const record = {
       ...billMeta,
       items,
       grossTotal,
-      discount: pricing.discount,
-      exchange: pricing.exchange,
-      netPayable,
+      discount: Number(pricing.discount) || 0,
+      exchange: Number(pricing.exchange) || 0,
+      taxableAmount,
+      gstRate: gstBreakdown.rate,
+      cgst: gstBreakdown.cgst,
+      sgst: gstBreakdown.sgst,
+      totalTax: gstBreakdown.totalTax,
+      netPayable: gstBreakdown.netPayable,
       paid: pricing.advance === '' ? 0 : Number(pricing.advance),
       pending: pendingDue,
       timestamp: Date.now()
@@ -148,11 +212,11 @@ function App() {
     return record;
   };
 
-  // PDF Engine & Native WhatsApp Sharing
+  // PDF Export & Native WhatsApp File Share
   const sharePDFDirectly = async () => {
     const record = saveCurrentOrder();
     const opt = {
-      margin: 6,
+      margin: 5,
       filename: `${billMeta.invNo.replace(/\//g, '_')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
@@ -167,16 +231,16 @@ function App() {
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           files: [pdfFile],
-          title: `Invoice ${record.invNo}`,
-          text: `Order Invoice from DREAM FOCUS PROJECTORS for ${record.custName || 'Customer'}`
+          title: `Tax Invoice ${record.invNo}`,
+          text: `GST Invoice from DREAM FOCUS PROJECTORS for ${record.custName || 'Customer'}`
         });
       } else {
         html2pdf().set(opt).from(element).save();
         if (record.custPhone) {
-          const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${record.invNo}\nHi ${record.custName || 'Customer'}, your order PDF is generated.\n*Payment Mode:* ${record.paymentMode}\n*Net Payable:* ₹${record.netPayable}\n*Paid/Advance:* ₹${record.paid}\n*Pending Due:* ₹${record.pending}\nContact: +91 85085 50847`;
+          const msg = `*DREAM FOCUS PROJECTORS - TAX INVOICE*\nInvoice: ${record.invNo}\nHi ${record.custName || 'Customer'},\nTaxable Amount: ₹${record.taxableAmount}\nGST (${record.gstRate}%): ₹${record.totalTax}\n*Total Bill Amount:* ₹${record.netPayable}\n*Paid/Advance:* ₹${record.paid}\n*Pending Due:* ₹${record.pending}\nContact: +91 85085 50847`;
           window.open(`https://wa.me/91${record.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         } else {
-          alert('PDF Downloaded! Enter customer phone number to launch WhatsApp.');
+          alert('PDF Downloaded! Please provide customer phone number to send WhatsApp message.');
         }
       }
     } catch (err) {
@@ -185,16 +249,85 @@ function App() {
     }
   };
 
+  // --- Deep Analytics Aggregations ---
+  const filteredHistory = useMemo(() => {
+    return history.filter(h => {
+      if (!h.date) return true;
+      const [y, m] = h.date.split('-');
+      const matchYear = analyticsYear === 'ALL' || y === analyticsYear;
+      const matchMonth = analyticsMonth === 'ALL' || m === analyticsMonth;
+      return matchYear && matchMonth;
+    });
+  }, [history, analyticsYear, analyticsMonth]);
+
+  // Overall Financial KPIs
+  const kpis = useMemo(() => {
+    return filteredHistory.reduce((acc, curr) => {
+      acc.sales += curr.netPayable || 0;
+      acc.taxable += curr.taxableAmount || 0;
+      acc.gst += curr.totalTax || 0;
+      acc.collected += Number(curr.paid) || 0;
+      acc.pending += Number(curr.pending) || 0;
+      acc.exchange += Number(curr.exchange) || 0;
+      return acc;
+    }, { sales: 0, taxable: 0, gst: 0, collected: 0, pending: 0, exchange: 0 });
+  }, [filteredHistory]);
+
+  // Monthly breakdown for selected year (Jan - Dec)
+  const monthlyBreakdown = useMemo(() => {
+    const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    return months.map((m, idx) => {
+      const records = history.filter(h => {
+        if (!h.date) return false;
+        const [y, rowM] = h.date.split('-');
+        return (analyticsYear === 'ALL' || y === analyticsYear) && rowM === m;
+      });
+
+      const totalSales = records.reduce((s, r) => s + (r.netPayable || 0), 0);
+      const totalGST = records.reduce((s, r) => s + (r.totalTax || 0), 0);
+      const totalCollected = records.reduce((s, r) => s + (Number(r.paid) || 0), 0);
+      const totalPending = records.reduce((s, r) => s + (Number(r.pending) || 0), 0);
+
+      return {
+        monthCode: m,
+        monthName: monthNames[idx],
+        count: records.length,
+        totalSales,
+        totalGST,
+        totalCollected,
+        totalPending
+      };
+    });
+  }, [history, analyticsYear]);
+
+  // Payment Mode Distribution
+  const paymentModeStats = useMemo(() => {
+    const stats = {};
+    filteredHistory.forEach(h => {
+      const mode = h.paymentMode || 'Other';
+      stats[mode] = (stats[mode] || 0) + (Number(h.paid) || 0);
+    });
+    return stats;
+  }, [filteredHistory]);
+
+  // Pending Dues Follow-up List
+  const pendingCustomers = useMemo(() => {
+    return filteredHistory.filter(h => (Number(h.pending) || 0) > 0);
+  }, [filteredHistory]);
+
+  // Export Analytics to Excel (CSV)
   const exportToCSV = () => {
-    let csv = "Invoice No,Date,Customer Name,Phone,Payment Mode,Net Total,Paid,Pending Due,Status\n";
-    history.forEach(h => {
-      csv += `"${h.invNo}","${h.date}","${h.custName}","${h.custPhone}","${h.paymentMode}",${h.netPayable},${h.paid},${h.pending},"${h.paymentStatus}"\n`;
+    let csv = "Invoice No,Date,Customer Name,Phone,Payment Mode,Taxable Val,GST Rate,CGST,SGST,Total GST,Net Payable,Paid,Pending Due,Status\n";
+    filteredHistory.forEach(h => {
+      csv += `"${h.invNo}","${h.date}","${h.custName}","${h.custPhone}","${h.paymentMode}",${h.taxableAmount || 0},${h.gstRate || 0},${h.cgst || 0},${h.sgst || 0},${h.totalTax || 0},${h.netPayable || 0},${h.paid || 0},${h.pending || 0},"${h.paymentStatus}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DFP_Sales_Report_${selectedYear}.csv`;
+    a.download = `DFP_Deep_Financial_Report_${analyticsYear}_${analyticsMonth}.csv`;
     a.click();
   };
 
@@ -206,12 +339,12 @@ function App() {
         <button 
           onClick={() => setTab('create')}
           className={`flex-1 py-3 font-bold rounded-lg text-sm transition shadow-sm ${tab === 'create' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
-          📝 Generate Order Bill
+          📝 Create GST Order Bill
         </button>
         <button 
           onClick={() => setTab('reports')}
           className={`flex-1 py-3 font-bold rounded-lg text-sm transition shadow-sm ${tab === 'reports' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
-          📊 Saved Orders & Reports ({history.length})
+          📊 Deep Financial Analytics & Monthly Reports ({history.length})
         </button>
       </div>
 
@@ -220,37 +353,40 @@ function App() {
           {/* Printable Invoice Container */}
           <div ref={invoiceRef} id="invoice-root" className="bg-white rounded-xl shadow-md border border-slate-200 p-6 sm:p-8">
             
-            {/* Header with Projector Branding */}
+            {/* Header with Projector Branding & GSTIN */}
             <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-5 rounded-lg flex justify-between items-center mb-6">
               <div className="flex items-center gap-4">
                 <ProjectorLogo />
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
                   <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
-                  <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847</p>
+                  <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone: +91 85085 50847 | <strong>GSTIN: {billMeta.shopGstin}</strong></p>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-amber-400 font-black text-xl tracking-wider block">ORDER INVOICE</span>
+                <span className="text-amber-400 font-black text-xl tracking-wider block">TAX INVOICE</span>
                 <span className={`text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide inline-block mt-1 ${pendingDue === 0 ? 'bg-emerald-500' : 'bg-amber-500'}`}>
                   {pendingDue === 0 ? 'PAID FULL' : billMeta.paymentStatus.toUpperCase()}
                 </span>
               </div>
             </div>
 
-            {/* Customer & Invoice Meta Grid */}
+            {/* Customer & Invoice Meta Grid with GSTIN */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
               <div>
                 <h3 className="text-xs font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Billed To (Customer Details)</h3>
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Name:</span>
-                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none" placeholder="Enter Customer Name" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
+                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Name:</span>
+                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none" placeholder="Enter Customer / Company Name" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">WhatsApp:</span>
+                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">WhatsApp:</span>
                     <input className="flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none" placeholder="10-Digit Mobile Number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Address:</span>
+                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Address:</span>
                     <input className="flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none" placeholder="Madurai Area / City" value={billMeta.custAddr} onChange={e => setBillMeta({...billMeta, custAddr: e.target.value})} />
+                  </div>
+                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Buyer GSTIN:</span>
+                    <input className="flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none uppercase font-mono text-[11px]" placeholder="Optional (e.g. 33AAAAA0000A1Z5)" value={billMeta.custGstin} onChange={e => setBillMeta({...billMeta, custGstin: e.target.value})} />
                   </div>
                 </div>
               </div>
@@ -266,6 +402,9 @@ function App() {
                   </div>
                   <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Proprietor:</span>
                     <span className="font-semibold text-slate-800">M. KANAGAVEL</span>
+                  </div>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Place of Supply:</span>
+                    <span className="font-semibold text-slate-800">Tamil Nadu (33)</span>
                   </div>
                 </div>
               </div>
@@ -321,18 +460,32 @@ function App() {
               + Add Item / Service
             </button>
 
-            {/* Financial Summary, Payment Method & Warranty Terms */}
+            {/* Financial Summary with GST Breakdown & Payment Mode */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start mb-6">
               
-              {/* Left Box: Warranty & Mode Selectors */}
+              {/* Left Box: Warranty, GST Rate & Payment Selectors */}
               <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
                 <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 30-Day Testing Warranty</h4>
                 <p>• 30-day testing warranty covers lamp performance and optical engine clarity.</p>
                 <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing.</p>
                 <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
                 
-                {/* Visible Selectors for Status & Payment Method */}
+                {/* Selectors for GST, Status & Payment Mode */}
                 <div className="pt-2 border-t border-sky-200 space-y-2 no-print">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-700">GST Slab Rate:</label>
+                    <select 
+                      className="bg-white border border-slate-300 rounded p-1 text-xs font-bold text-sky-900"
+                      value={pricing.gstRate} 
+                      onChange={e => setPricing({...pricing, gstRate: Number(e.target.value)})}>
+                      <option value="18">18% (Standard Projectors & Repairs)</option>
+                      <option value="28">28% (High-End Electronics)</option>
+                      <option value="12">12% (Specified Parts)</option>
+                      <option value="5">5% (Essential Accessories)</option>
+                      <option value="0">0% (Exempted / Non-GST)</option>
+                    </select>
+                  </div>
+
                   <div>
                     <label className="block font-bold text-slate-700 mb-0.5">Payment Status:</label>
                     <select 
@@ -361,10 +514,10 @@ function App() {
                 </div>
               </div>
 
-              {/* Right Box: Totals, Paid & Pending Due */}
+              {/* Right Box: GST Breakdown & Net Payable */}
               <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200 text-xs space-y-2 font-medium">
                 <div className="flex justify-between text-slate-600">
-                  <span>Gross Order Total:</span>
+                  <span>Gross Order Value:</span>
                   <span>₹{grossTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -376,18 +529,43 @@ function App() {
                   <input type="number" className="w-28 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
                 </div>
                 
-                <div className="flex justify-between text-slate-900 font-bold border-t border-slate-300 pt-1.5 text-sm">
-                  <span>Net Payable:</span>
-                  <span>₹{netPayable.toLocaleString('en-IN')}</span>
+                {/* Taxable Value */}
+                <div className="flex justify-between text-slate-900 font-bold border-t border-slate-300 pt-1.5">
+                  <span>Taxable Value:</span>
+                  <span>₹{taxableAmount.toLocaleString('en-IN')}</span>
                 </div>
 
-                {/* Amount Received with Quick 1-Click Pay Full Button */}
+                {/* GST Rows */}
+                {pricing.gstRate > 0 && (
+                  <div className="bg-sky-50/70 p-2 rounded border border-sky-100 space-y-1 text-slate-700">
+                    <div className="flex justify-between">
+                      <span>CGST ({pricing.gstRate / 2}%):</span>
+                      <span>₹{gstBreakdown.cgst.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>SGST ({pricing.gstRate / 2}%):</span>
+                      <span>₹{gstBreakdown.sgst.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-sky-900 border-t border-sky-200 pt-0.5">
+                      <span>Total GST Tax ({pricing.gstRate}%):</span>
+                      <span>₹{gstBreakdown.totalTax.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Net Grand Total */}
+                <div className="flex justify-between text-slate-900 font-black border-t-2 border-slate-400 pt-1 text-base">
+                  <span>Net Grand Total:</span>
+                  <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
+                </div>
+
+                {/* Advance Amount Paid with 1-Click Pay Full */}
                 <div className="flex justify-between items-center text-sky-700 font-semibold pt-1">
                   <div className="flex items-center gap-1.5">
                     <span>{billMeta.paymentStatus === 'Full Paid' ? 'Amount Paid (₹):' : 'Advance Paid (₹):'}</span>
                     <button 
                       type="button" 
-                      onClick={handleSetFullPayment} 
+                      onClick={handlePayFull} 
                       className="no-print text-[10px] bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold px-1.5 py-0.5 rounded border border-sky-300">
                       ⚡ Pay Full
                     </button>
@@ -399,7 +577,7 @@ function App() {
                     onChange={e => {
                       const val = e.target.value === '' ? '' : Number(e.target.value);
                       setPricing({ ...pricing, advance: val });
-                      if (val >= netPayable && netPayable > 0) {
+                      if (val >= gstBreakdown.netPayable && gstBreakdown.netPayable > 0) {
                         setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
                       }
                     }} 
@@ -435,7 +613,7 @@ function App() {
             <button 
               onClick={sharePDFDirectly} 
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
-              📄 Share PDF File to WhatsApp
+              📄 Share GST PDF Bill to WhatsApp
             </button>
             <button 
               onClick={() => { saveCurrentOrder(); window.print(); }} 
@@ -447,101 +625,235 @@ function App() {
                 setBillMeta({
                   invNo: `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`,
                   date: new Date().toISOString().slice(0, 10),
-                  custName: '', custPhone: '', custAddr: '',
+                  custName: '', custPhone: '', custAddr: '', custGstin: '',
+                  shopGstin: '33AABFD1234F1Z5',
                   paymentStatus: 'Advance Paid', paymentMode: 'GPay / PhonePe UPI'
                 });
                 setItems([{ id: Date.now(), desc: '', category: 'Sales Unit', qty: 1, rate: 0 }]);
-                setPricing({ discount: 0, exchange: 0, advance: 0 });
+                setPricing({ discount: 0, exchange: 0, gstRate: 18, advance: 0 });
               }} 
               className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-lg transition">
-              🔄 Reset Form
+              🔄 New Bill
             </button>
           </div>
         </div>
       ) : (
-        /* Saved Analytics Dashboard */
-        <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-slate-900">Saved Order Transactions & Analytics</h2>
-            <button onClick={exportToCSV} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-2 rounded transition">
-              📥 Export to Excel (CSV)
-            </button>
+        /* --- DEEP FINANCIAL ANALYTICS & REPORTS DASHBOARD --- */
+        <div className="space-y-6">
+          
+          {/* Top Filter Controls */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5 flex flex-wrap justify-between items-center gap-4">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Deep Financial Analytics & Tax Reports</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Comprehensive audit breakdown of revenue, GST liabilities, collections & aging dues.</p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-600 mr-1.5">Year:</label>
+                <select 
+                  className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs font-bold"
+                  value={analyticsYear} 
+                  onChange={e => setAnalyticsYear(e.target.value)}>
+                  <option value="ALL">All Years</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600 mr-1.5">Month:</label>
+                <select 
+                  className="bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 text-xs font-bold"
+                  value={analyticsMonth} 
+                  onChange={e => setAnalyticsMonth(e.target.value)}>
+                  <option value="ALL">All Months (Yearly View)</option>
+                  <option value="01">January</option>
+                  <option value="02">February</option>
+                  <option value="03">March</option>
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+
+              <button onClick={exportToCSV} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-2 rounded transition flex items-center gap-1.5">
+                📥 Export to Excel (CSV)
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="bg-slate-50 border-l-4 border-sky-600 p-3 rounded">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Total Sales</span>
-              <div className="text-lg font-black text-slate-900">
-                ₹{history.reduce((s, h) => s + (h.netPayable || 0), 0).toLocaleString('en-IN')}
-              </div>
+          {/* Key Executive KPI Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white border-l-4 border-sky-600 p-4 rounded-xl shadow-sm border border-slate-200">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Gross Revenue (Net)</span>
+              <div className="text-xl font-black text-slate-900 mt-1">₹{kpis.sales.toLocaleString('en-IN')}</div>
+              <span className="text-[10px] text-slate-400">Taxable: ₹{kpis.taxable.toLocaleString('en-IN')}</span>
             </div>
-            <div className="bg-slate-50 border-l-4 border-emerald-600 p-3 rounded">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Cash/UPI Collected</span>
-              <div className="text-lg font-black text-emerald-700">
-                ₹{history.reduce((s, h) => s + (Number(h.paid) || 0), 0).toLocaleString('en-IN')}
-              </div>
+
+            <div className="bg-white border-l-4 border-purple-600 p-4 rounded-xl shadow-sm border border-slate-200">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Total GST Collected</span>
+              <div className="text-xl font-black text-purple-700 mt-1">₹{kpis.gst.toLocaleString('en-IN')}</div>
+              <span className="text-[10px] text-purple-500">CGST + SGST Split</span>
             </div>
-            <div className="bg-slate-50 border-l-4 border-red-600 p-3 rounded">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Pending Dues</span>
-              <div className="text-lg font-black text-red-600">
-                ₹{history.reduce((s, h) => s + (Number(h.pending) || 0), 0).toLocaleString('en-IN')}
-              </div>
+
+            <div className="bg-white border-l-4 border-emerald-600 p-4 rounded-xl shadow-sm border border-slate-200">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Cash & UPI Received</span>
+              <div className="text-xl font-black text-emerald-700 mt-1">₹{kpis.collected.toLocaleString('en-IN')}</div>
+              <span className="text-[10px] text-emerald-600 font-semibold">{kpis.sales > 0 ? Math.round((kpis.collected / kpis.sales) * 100) : 0}% Realized</span>
             </div>
-            <div className="bg-slate-50 border-l-4 border-purple-600 p-3 rounded">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">Trade-In Value</span>
-              <div className="text-lg font-black text-purple-700">
-                ₹{history.reduce((s, h) => s + (Number(h.exchange) || 0), 0).toLocaleString('en-IN')}
-              </div>
+
+            <div className="bg-white border-l-4 border-red-600 p-4 rounded-xl shadow-sm border border-slate-200">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Outstanding Dues</span>
+              <div className="text-xl font-black text-red-600 mt-1">₹{kpis.pending.toLocaleString('en-IN')}</div>
+              <span className="text-[10px] text-red-500">{pendingCustomers.length} pending client(s)</span>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border border-slate-200">
-              <thead className="bg-slate-900 text-white uppercase text-[11px]">
-                <tr>
-                  <th className="p-2">Invoice No</th>
-                  <th className="p-2">Date</th>
-                  <th className="p-2">Customer</th>
-                  <th className="p-2">Mode</th>
-                  <th className="p-2">Status</th>
-                  <th className="p-2 text-right">Net</th>
-                  <th className="p-2 text-right">Paid</th>
-                  <th className="p-2 text-right">Due</th>
-                  <th className="p-2 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {history.length === 0 ? (
-                  <tr><td colSpan="9" className="p-4 text-center text-slate-400">No saved orders yet.</td></tr>
+          {/* Month-by-Month Deep Aggregation Matrix */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
+            <h3 className="font-bold text-slate-900 text-sm mb-3">📅 Yearly Month-by-Month Performance Matrix ({analyticsYear})</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border border-slate-200">
+                <thead className="bg-slate-900 text-white uppercase text-[11px]">
+                  <tr>
+                    <th className="p-2.5">Month</th>
+                    <th className="p-2.5 text-center">Orders</th>
+                    <th className="p-2.5 text-right">Gross Sales (₹)</th>
+                    <th className="p-2.5 text-right">GST Collected (₹)</th>
+                    <th className="p-2.5 text-right">Realized Cash/UPI (₹)</th>
+                    <th className="p-2.5 text-right">Pending Balance (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-medium">
+                  {monthlyBreakdown.map(m => (
+                    <tr key={m.monthCode} className={`hover:bg-slate-50 ${m.count > 0 ? 'bg-sky-50/30' : ''}`}>
+                      <td className="p-2.5 font-bold text-slate-800">{m.monthName} ({analyticsYear})</td>
+                      <td className="p-2.5 text-center font-semibold">{m.count}</td>
+                      <td className="p-2.5 text-right font-bold text-slate-900">₹{m.totalSales.toLocaleString('en-IN')}</td>
+                      <td className="p-2.5 text-right text-purple-700">₹{m.totalGST.toLocaleString('en-IN')}</td>
+                      <td className="p-2.5 text-right text-emerald-700">₹{m.totalCollected.toLocaleString('en-IN')}</td>
+                      <td className={`p-2.5 text-right font-black ${m.totalPending > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                        ₹{m.totalPending.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Payment Method Split & Pending Collection Tracker */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            
+            {/* Payment Mode Analysis */}
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
+              <h3 className="font-bold text-slate-900 text-sm mb-3">💳 Payment Mode Revenue Realization</h3>
+              <div className="space-y-3">
+                {Object.keys(paymentModeStats).length === 0 ? (
+                  <p className="text-xs text-slate-400">No payment data recorded.</p>
                 ) : (
-                  history.map(item => (
+                  Object.entries(paymentModeStats).map(([mode, amt]) => {
+                    const percent = kpis.collected > 0 ? Math.round((amt / kpis.collected) * 100) : 0;
+                    return (
+                      <div key={mode} className="text-xs space-y-1">
+                        <div className="flex justify-between font-bold">
+                          <span>{mode}</span>
+                          <span>₹{amt.toLocaleString('en-IN')} ({percent}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                          <div className="bg-sky-600 h-full" style={{ width: `${percent}%` }}></div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Pending Collections Aging with 1-Click WhatsApp Reminder */}
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
+              <h3 className="font-bold text-red-600 text-sm mb-3">⚠️ Pending Debt Collection Tracker</h3>
+              {pendingCustomers.length === 0 ? (
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded text-center text-xs text-emerald-800 font-bold">
+                  🎉 Zero outstanding dues! All customer orders are fully paid.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {pendingCustomers.map(c => (
+                    <div key={c.invNo} className="bg-red-50/50 border border-red-200 p-2.5 rounded-lg flex justify-between items-center text-xs">
+                      <div>
+                        <div className="font-bold text-slate-800">{c.custName || 'Customer'} ({c.invNo})</div>
+                        <div className="text-[11px] text-red-600 font-black">Due: ₹{Number(c.pending).toLocaleString('en-IN')}</div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Balance Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you!`;
+                          window.open(`https://wa.me/91${c.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] flex items-center gap-1">
+                        💬 WhatsApp Reminder
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Master Transaction Registry */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
+            <h3 className="font-bold text-slate-900 text-sm mb-3">📋 Complete Invoice Audit Ledger</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border border-slate-200">
+                <thead className="bg-slate-900 text-white uppercase text-[11px]">
+                  <tr>
+                    <th className="p-2">Inv No</th>
+                    <th className="p-2">Date</th>
+                    <th className="p-2">Customer</th>
+                    <th className="p-2">Mode</th>
+                    <th className="p-2 text-right">Taxable</th>
+                    <th className="p-2 text-right">GST</th>
+                    <th className="p-2 text-right">Total</th>
+                    <th className="p-2 text-right">Paid</th>
+                    <th className="p-2 text-right">Due</th>
+                    <th className="p-2 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredHistory.map(item => (
                     <tr key={item.invNo} className="hover:bg-slate-50">
                       <td className="p-2 font-bold">{item.invNo}</td>
                       <td className="p-2 text-slate-500">{item.date}</td>
                       <td className="p-2 font-medium">{item.custName || 'Walk-in'}</td>
-                      <td className="p-2 font-semibold text-slate-600">{item.paymentMode || 'UPI'}</td>
-                      <td className="p-2">
-                        <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${item.pending === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {item.pending === 0 ? 'PAID FULL' : item.paymentStatus}
-                        </span>
-                      </td>
-                      <td className="p-2 text-right font-semibold">₹{item.netPayable?.toLocaleString('en-IN')}</td>
-                      <td className="p-2 text-right text-emerald-700 font-semibold">₹{Number(item.paid)?.toLocaleString('en-IN')}</td>
-                      <td className="p-2 text-right text-red-600 font-black">₹{Number(item.pending)?.toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-slate-600">{item.paymentMode || 'UPI'}</td>
+                      <td className="p-2 text-right">₹{(item.taxableAmount || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-right text-purple-700">₹{(item.totalTax || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-right font-black">₹{(item.netPayable || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-right text-emerald-700 font-semibold">₹{(Number(item.paid) || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-right text-red-600 font-black">₹{(Number(item.pending) || 0).toLocaleString('en-IN')}</td>
                       <td className="p-2 text-center">
                         <button 
                           onClick={() => {
                             setBillMeta({
                               invNo: item.invNo, date: item.date, custName: item.custName,
-                              custPhone: item.custPhone, custAddr: item.custAddr,
+                              custPhone: item.custPhone, custAddr: item.custAddr, custGstin: item.custGstin || '',
+                              shopGstin: '33AABFD1234F1Z5',
                               paymentStatus: item.paymentStatus, paymentMode: item.paymentMode || 'GPay / PhonePe UPI'
                             });
                             setItems(item.items);
-                            setPricing({ discount: item.discount, exchange: item.exchange, advance: item.paid });
+                            setPricing({ discount: item.discount, exchange: item.exchange, gstRate: item.gstRate || 18, advance: item.paid });
                             setTab('create');
                           }}
                           className="text-sky-600 hover:text-sky-800 font-bold mr-2">
-                          Load
+                          Edit
                         </button>
                         <button 
                           onClick={() => setHistory(history.filter(h => h.invNo !== item.invNo))}
@@ -550,13 +862,15 @@ function App() {
                         </button>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
+
         </div>
       )}
+
     </div>
   );
 }
