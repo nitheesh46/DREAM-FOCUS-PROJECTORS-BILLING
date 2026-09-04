@@ -1,419 +1,503 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DREAM FOCUS PROJECTORS - Billing System</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DREAM FOCUS PROJECTORS - React Order & Billing System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX compilation in-browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- HTML2PDF Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <style>
-    @page { size: A4; margin: 8mm; }
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { background: #f1f5f9; margin: 0; padding: 12px; color: #0f172a; }
-    .container { max-width: 880px; margin: auto; }
-
-    /* Tabs */
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .tab-btn { flex: 1; padding: 12px; font-size: 14px; font-weight: bold; border: none; border-radius: 6px; background: #e2e8f0; cursor: pointer; }
-    .tab-btn.active { background: #0284c7; color: white; }
-
-    /* Card */
-    .card { background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-
-    /* Header */
-    .header { background: linear-gradient(135deg, #0f172a 0%, #0369a1 100%); color: white; padding: 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
-    .brand p { margin: 2px 0 0 0; font-size: 10px; color: #38bdf8; text-transform: uppercase; font-weight: 600; }
-    .inv-title { text-align: right; }
-    .inv-title h2 { margin: 0; color: #f59e0b; font-size: 18px; font-weight: 900; }
-    .badge { background: #16a34a; color: white; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 4px; }
-
-    /* Meta Grid */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
-    .field { display: flex; flex-direction: column; margin-bottom: 6px; }
-    .field label { font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 2px; }
-    .field input { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; }
-
-    /* Items Table */
-    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px; }
-    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-    th { background: #0f172a; color: white; font-size: 11px; text-transform: uppercase; }
-    td input, td select { width: 100%; border: none; background: transparent; font-size: 12px; outline: none; }
-    .text-center { text-align: center; }
-    .text-right { text-align: right; }
-    .font-bold { font-weight: bold; }
-
-    /* Summary Section */
-    .summary-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; margin-top: 14px; }
-    .terms { background: #f0f9ff; border-left: 3px solid #0284c7; padding: 10px; border-radius: 0 4px 4px 0; font-size: 11px; color: #334155; }
-    .terms h4 { margin: 0 0 4px 0; color: #0284c7; font-size: 12px; }
-    .terms ul { margin: 0; padding-left: 14px; }
-
-    .calc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .calc-table td { padding: 5px 8px; border: none; border-bottom: 1px dashed #e2e8f0; }
-    .calc-table .label { color: #64748b; text-align: right; }
-    .calc-table .val { text-align: right; font-weight: 600; width: 100px; }
-    .calc-table .highlight { font-weight: bold; background: #f8fafc; border-top: 1px solid #94a3b8; border-bottom: 2px solid #0f172a; }
-    .calc-table .due { color: #dc2626; font-weight: 900; font-size: 13px; background: #fef2f2; border-bottom: 2px solid #dc2626; }
-
-    /* Stamp & Signature */
-    .footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #cbd5e1; padding-top: 12px; margin-top: 16px; }
-    .stamp { width: 100px; height: 100px; border: 3px double #1e40af; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(-10deg); color: #1e40af; text-align: center; }
-    .stamp-text { font-size: 6px; font-weight: 900; text-transform: uppercase; }
-    .stamp-status { font-size: 9px; font-weight: 900; color: #dc2626; border-top: 1px solid #1e40af; border-bottom: 1px solid #1e40af; margin: 2px 0; padding: 1px 4px; }
-    .sign-box { text-align: right; }
-    .sign-name { font-weight: bold; font-size: 12px; border-top: 1px solid #0f172a; display: inline-block; padding-top: 3px; width: 160px; text-align: center; }
-
-    /* Action Buttons */
-    .btn { padding: 10px 16px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px; }
-    .btn-sky { background: #0284c7; color: white; }
-    .btn-green { background: #16a34a; color: white; }
-    .btn-dark { background: #334155; color: white; }
-    .btn-del { background: #ef4444; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
-
     @media print {
-      body { background: white; padding: 0; }
-      .no-print, .tabs { display: none !important; }
-      .card { border: none; box-shadow: none; padding: 0; }
+      .no-print { display: none !important; }
+      body { background: white !important; padding: 0 !important; }
+      #invoice-root { box-shadow: none !important; border: none !important; width: 100% !important; margin: 0 !important; }
     }
   </style>
 </head>
-<body>
+<body class="bg-slate-100 text-slate-900 min-h-screen py-6 px-3 sm:px-6">
 
-<div class="container">
-  
-  <div class="tabs no-print">
-    <button class="tab-btn active" onclick="setTab('create')">📝 Create Order Bill</button>
-    <button class="tab-btn" onclick="setTab('history')">📊 Saved Orders & Records</button>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+// --- Vector Components ---
+const ProjectorLogo = () => (
+  <svg className="w-12 h-12 flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="20" fill="#0284C7"/>
+    <rect x="15" y="38" width="55" height="30" rx="6" fill="#FFFFFF"/>
+    <circle cx="35" cy="53" r="9" fill="#0F172A" stroke="#38BDF8" strokeWidth="3"/>
+    <circle cx="35" cy="53" r="4" fill="#F59E0B"/>
+    <path d="M68 46L90 32V74L68 60V46Z" fill="#F59E0B" opacity="0.9"/>
+    <line x1="52" y1="45" x2="52" y2="61" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round"/>
+    <line x1="58" y1="45" x2="58" y2="61" stroke="#0284C7" strokeWidth="2.5" strokeLinecap="round"/>
+    <rect x="22" y="68" width="6" height="4" rx="1" fill="#FFFFFF"/>
+    <rect x="54" y="68" width="6" height="4" rx="1" fill="#FFFFFF"/>
+  </svg>
+);
+
+const RubberStamp = ({ status }) => (
+  <div className="w-28 h-28 rounded-full border-4 border-double border-blue-800 text-blue-900 p-2 flex flex-col items-center justify-center -rotate-12 select-none opacity-85 shadow-[0_0_0_1px_#1e40af] bg-blue-50/20">
+    <span className="text-[7px] font-black tracking-widest text-center leading-tight uppercase">★ DREAM FOCUS ★<br/>PROJECTORS</span>
+    <span className="text-[10px] font-extrabold text-red-700 border-y-2 border-blue-800 my-0.5 px-2 tracking-wider uppercase">
+      {status === 'Paid' ? 'PAID FULL' : 'VERIFIED'}
+    </span>
+    <span className="text-[7px] font-bold tracking-wider">MADURAI - 625002</span>
   </div>
+);
 
-  <!-- TAB 1: BILLING FORM -->
-  <div id="tab-create">
-    <div class="card" id="billArea">
-      
-      <!-- Header -->
-      <div class="header">
-        <div class="brand">
-          <svg width="42" height="42" viewBox="0 0 100 100" fill="none">
-            <rect width="100" height="100" rx="20" fill="#0284C7"/>
-            <rect x="15" y="38" width="55" height="30" rx="6" fill="#FFFFFF"/>
-            <circle cx="35" cy="53" r="9" fill="#0F172A" stroke="#38BDF8" stroke-width="3"/>
-            <circle cx="35" cy="53" r="4" fill="#F59E0B"/>
-            <path d="M68 46L90 32V74L68 60V46Z" fill="#F59E0B"/>
-            <line x1="52" y1="45" x2="52" y2="61" stroke="#0284C7" stroke-width="2.5"/>
-            <line x1="58" y1="45" x2="58" y2="61" stroke="#0284C7" stroke-width="2.5"/>
-            <rect x="22" y="68" width="6" height="4" fill="#FFFFFF"/>
-            <rect x="54" y="68" width="6" height="4" fill="#FFFFFF"/>
-          </svg>
-          <div>
-            <h1>DREAM FOCUS PROJECTORS</h1>
-            <p>Sales • Chip-Level Repair • Pre-Owned Projectors</p>
-          </div>
-        </div>
-        <div class="inv-title">
-          <h2>ORDER BILL</h2>
-          <span class="badge" id="displayStatus">ADVANCE CONFIRMED</span>
-        </div>
-      </div>
-
-      <!-- Customer & Bill Meta -->
-      <div class="grid-2">
-        <div>
-          <div class="field"><label>Customer Name:</label><input type="text" id="custName" placeholder="Enter Customer Name"></div>
-          <div class="field"><label>WhatsApp Mobile:</label><input type="tel" id="custPhone" placeholder="10-digit number"></div>
-          <div class="field"><label>Delivery Area:</label><input type="text" id="custAddr" placeholder="Madurai Area / City"></div>
-        </div>
-        <div>
-          <div class="field"><label>Invoice No:</label><input type="text" id="invNo"></div>
-          <div class="field"><label>Date:</label><input type="date" id="invDate"></div>
-          <div class="field"><label>Proprietor Contact:</label><input type="text" value="M. KANAGAVEL | +91 85085 50847" readonly style="background:#f1f5f9;"></div>
-        </div>
-      </div>
-
-      <!-- Item Table -->
-      <table id="itemTable">
-        <thead>
-          <tr>
-            <th style="width: 5%;" class="text-center">#</th>
-            <th style="width: 45%;">Item / Service Details</th>
-            <th style="width: 15%;" class="text-center">Category</th>
-            <th style="width: 10%;" class="text-center">Qty</th>
-            <th style="width: 12%;" class="text-right">Rate (₹)</th>
-            <th style="width: 13%;" class="text-right">Total (₹)</th>
-            <th style="width: 4%;" class="no-print"></th>
-          </tr>
-        </thead>
-        <tbody id="itemBody">
-          <tr>
-            <td class="text-center">1</td>
-            <td><input type="text" value="Epson EB-X41 Pre-Owned Projector (3600 Lumens)"></td>
-            <td>
-              <select>
-                <option value="Sales Unit">Sales Unit</option>
-                <option value="Service">Service</option>
-                <option value="Accessory">Accessory</option>
-              </select>
-            </td>
-            <td><input type="number" class="text-center qty" value="1" oninput="calc()"></td>
-            <td><input type="number" class="text-right rate" value="14500" oninput="calc()"></td>
-            <td class="text-right font-bold row-total">14500.00</td>
-            <td class="no-print text-center"><button class="btn-del" onclick="deleteRow(this)">✕</button></td>
-          </tr>
-        </tbody>
-      </table>
-
-      <button class="btn btn-sky no-print" onclick="addRow()">+ Add Item / Service</button>
-
-      <!-- Summary & Terms -->
-      <div class="summary-grid">
-        <div class="terms">
-          <h4>🛡️ 30-Day Testing Warranty Terms</h4>
-          <ul>
-            <li>30-day testing warranty covers lamp clarity and motherboard.</li>
-            <li>Free testing diagnostics for future maintenance.</li>
-            <li>Physical impact and water damage are not covered.</li>
-          </ul>
-          <div class="no-print" style="margin-top:8px;">
-            <label style="font-size:11px; font-weight:bold;">Payment Status:</label>
-            <select id="paymentStatus" onchange="calc()" style="width:100%; padding:5px; margin-top:3px;">
-              <option value="Advance">Advance Paid</option>
-              <option value="Full Paid">Full Paid</option>
-              <option value="Pending">Pending / Balance Due</option>
-              <option value="Exchange">Exchange Unit</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <table class="calc-table">
-            <tr><td class="label">Gross Total:</td><td class="val" id="grossTotal">₹14,500.00</td></tr>
-            <tr>
-              <td class="label">Discount (₹):</td>
-              <td class="val"><input type="number" id="discount" value="500" class="text-right" style="width:80px;" oninput="calc()"></td>
-            </tr>
-            <tr>
-              <td class="label">Exchange Old Unit (₹):</td>
-              <td class="val"><input type="number" id="exchange" value="1000" class="text-right" style="width:80px;" oninput="calc()"></td>
-            </tr>
-            <tr class="highlight"><td class="label">Net Total:</td><td class="val" id="netAmount">₹13,000.00</td></tr>
-            <tr>
-              <td class="label" style="color:#0284c7;">Advance Paid (₹):</td>
-              <td class="val"><input type="number" id="paid" value="5000" class="text-right" style="width:80px;" oninput="calc()"></td>
-            </tr>
-            <tr class="due"><td class="label">PENDING BALANCE:</td><td class="val" id="pendingDue">₹8,000.00</td></tr>
-          </table>
-        </div>
-      </div>
-
-      <!-- Footer Stamp & Sign -->
-      <div class="footer">
-        <div style="font-size:10px; color:#64748b;">
-          <strong>DREAM FOCUS PROJECTORS</strong><br>
-          No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002<br>
-          Phone / WhatsApp: +91 85085 50847
-        </div>
-
-        <div style="display:flex; align-items:center; gap:16px;">
-          <div class="stamp">
-            <span class="stamp-text">★ DREAM FOCUS ★<br>PROJECTORS</span>
-            <span class="stamp-status" id="stampStatus">VERIFIED</span>
-            <span class="stamp-text">MADURAI</span>
-          </div>
-
-          <div class="sign-box">
-            <svg width="130" height="35" viewBox="0 0 200 60" fill="none">
-              <path d="M15 42 C 25 15, 35 10, 42 35 C 48 50, 52 20, 65 28 C 75 35, 80 22, 92 32 C 100 38, 110 18, 125 35 C 135 45, 140 15, 155 30 C 165 40, 175 25, 185 32" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
-              <path d="M10 48 Q 90 52 190 44" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
-            </svg><br>
-            <div class="sign-name">M. KANAGAVEL (Proprietor)</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Action Bar -->
-    <div style="margin-top:14px; display:flex; gap:10px;" class="no-print">
-      <button class="btn btn-green" onclick="saveAndPrint()">🖨️ Save Bill & Print PDF</button>
-      <button class="btn btn-sky" onclick="shareWhatsApp()">💬 Share Bill to WhatsApp</button>
-      <button class="btn btn-dark" onclick="newBill()">🔄 New Bill</button>
+const DigitalSignature = () => (
+  <div className="text-right flex flex-col items-end">
+    <span className="text-[11px] text-slate-500 font-semibold mb-1">Authorized Signatory</span>
+    <svg className="w-36 h-10" viewBox="0 0 200 60" fill="none">
+      <path d="M15 42 C 25 15, 35 10, 42 35 C 48 50, 52 20, 65 28 C 75 35, 80 22, 92 32 C 100 38, 110 18, 125 35 C 135 45, 140 15, 155 30 C 165 40, 175 25, 185 32" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M10 48 Q 90 52 190 44" stroke="#0f172a" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+    <div className="text-xs font-bold text-slate-900 border-t border-slate-900 pt-1 w-44 text-center">
+      M. KANAGAVEL (Proprietor)
     </div>
   </div>
+);
 
-  <!-- TAB 2: SAVED RECORDS -->
-  <div id="tab-history" style="display:none;">
-    <div class="card">
-      <h3 style="margin-top:0;">Saved Bills Database</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Inv No</th>
-            <th>Date</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th class="text-right">Net</th>
-            <th class="text-right">Paid</th>
-            <th class="text-right">Due</th>
-            <th class="text-center no-print">Action</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-      </table>
-    </div>
-  </div>
+// --- Main Application ---
+function App() {
+  const [tab, setTab] = useState('create');
+  const invoiceRef = useRef(null);
 
-</div>
+  // Form State
+  const [billMeta, setBillMeta] = useState({
+    invNo: `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`,
+    date: new Date().toISOString().slice(0, 10),
+    custName: '',
+    custPhone: '',
+    custAddr: '',
+    paymentStatus: 'Advance',
+    paymentMode: 'GPay / PhonePe UPI'
+  });
 
-<script>
-  let db = JSON.parse(localStorage.getItem('DFP_OFFLINE_DB') || '[]');
+  const [items, setItems] = useState([
+    { id: 1, desc: 'Epson EB-X41 Pre-Owned 3LCD Projector (3600 Lumens)', category: 'Sales Unit', qty: 1, rate: 14500 },
+    { id: 2, desc: 'Original Remote Control + High Quality HDMI Cable Kit', category: 'Accessory', qty: 1, rate: 0 }
+  ]);
 
-  document.getElementById('invDate').valueAsDate = new Date();
-  document.getElementById('invNo').value = 'DFP/2026/' + Math.floor(1000 + Math.random() * 9000);
+  const [pricing, setPricing] = useState({ discount: 500, exchange: 1000, advance: 5000 });
+  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('DFP_REACT_BILLS') || '[]'));
+  const [selectedYear, setSelectedYear] = useState('2026');
 
-  function setTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    if (tab === 'create') {
-      document.querySelectorAll('.tab-btn')[0].classList.add('active');
-      document.getElementById('tab-create').style.display = 'block';
-      document.getElementById('tab-history').style.display = 'none';
-    } else {
-      document.querySelectorAll('.tab-btn')[1].classList.add('active');
-      document.getElementById('tab-create').style.display = 'none';
-      document.getElementById('tab-history').style.display = 'block';
-      renderHistory();
-    }
-  }
+  // Sync to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('DFP_REACT_BILLS', JSON.stringify(history));
+  }, [history]);
 
-  function addRow() {
-    const tbody = document.getElementById('itemBody');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="text-center">${tbody.rows.length + 1}</td>
-      <td><input type="text" placeholder="Projector model or service description"></td>
-      <td>
-        <select>
-          <option value="Sales Unit">Sales Unit</option>
-          <option value="Service">Service</option>
-          <option value="Accessory">Accessory</option>
-        </select>
-      </td>
-      <td><input type="number" class="text-center qty" value="1" oninput="calc()"></td>
-      <td><input type="number" class="text-right rate" value="0" oninput="calc()"></td>
-      <td class="text-right font-bold row-total">0.00</td>
-      <td class="no-print text-center"><button class="btn-del" onclick="deleteRow(this)">✕</button></td>
-    `;
-    tbody.appendChild(tr);
-    calc();
-  }
+  // Dynamic Calculations
+  const grossTotal = useMemo(() => items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.rate) || 0), 0), [items]);
+  const netPayable = useMemo(() => Math.max(0, grossTotal - (Number(pricing.discount) || 0) - (Number(pricing.exchange) || 0)), [grossTotal, pricing]);
+  const pendingDue = useMemo(() => Math.max(0, netPayable - (Number(pricing.advance) || 0)), [netPayable, pricing.advance]);
 
-  function deleteRow(btn) {
-    btn.closest('tr').remove();
-    const rows = document.querySelectorAll('#itemBody tr');
-    rows.forEach((r, i) => r.cells[0].innerText = i + 1);
-    calc();
-  }
+  // Item List Handlers
+  const addItem = () => setItems([...items, { id: Date.now(), desc: '', category: 'Sales Unit', qty: 1, rate: 0 }]);
+  const removeItem = (id) => setItems(items.filter(i => i.id !== id));
+  const updateItem = (id, field, val) => setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
 
-  function calc() {
-    let gross = 0;
-    document.querySelectorAll('#itemBody tr').forEach(row => {
-      const q = parseFloat(row.querySelector('.qty').value) || 0;
-      const r = parseFloat(row.querySelector('.rate').value) || 0;
-      const t = q * r;
-      row.querySelector('.row-total').innerText = t.toFixed(2);
-      gross += t;
-    });
-
-    const disc = parseFloat(document.getElementById('discount').value) || 0;
-    const exch = parseFloat(document.getElementById('exchange').value) || 0;
-    const paid = parseFloat(document.getElementById('paid').value) || 0;
-
-    const net = Math.max(0, gross - disc - exch);
-    const pending = Math.max(0, net - paid);
-
-    document.getElementById('grossTotal').innerText = '₹' + gross.toFixed(2);
-    document.getElementById('netAmount').innerText = '₹' + net.toFixed(2);
-    document.getElementById('pendingDue').innerText = '₹' + pending.toFixed(2);
-
-    const st = document.getElementById('paymentStatus').value;
-    document.getElementById('displayStatus').innerText = st.toUpperCase() + ' CONFIRMED';
-    document.getElementById('stampStatus').innerText = pending <= 0 ? 'PAID FULL' : 'VERIFIED';
-  }
-
-  function saveRecord() {
-    const inv = {
-      no: document.getElementById('invNo').value,
-      date: document.getElementById('invDate').value,
-      name: document.getElementById('custName').value || 'Customer',
-      phone: document.getElementById('custPhone').value,
-      net: document.getElementById('netAmount').innerText,
-      paid: document.getElementById('paid').value,
-      due: document.getElementById('pendingDue').innerText,
-      status: document.getElementById('paymentStatus').value
+  // Save Order Record
+  const saveCurrentOrder = () => {
+    const record = {
+      ...billMeta,
+      items,
+      grossTotal,
+      discount: pricing.discount,
+      exchange: pricing.exchange,
+      netPayable,
+      paid: pricing.advance,
+      pending: pendingDue,
+      timestamp: Date.now()
     };
-    db = db.filter(i => i.no !== inv.no);
-    db.unshift(inv);
-    localStorage.setItem('DFP_OFFLINE_DB', JSON.stringify(db));
-  }
-
-  function saveAndPrint() {
-    saveRecord();
-    window.print();
-  }
-
-  function shareWhatsApp() {
-    saveRecord();
-    const phone = document.getElementById('custPhone').value.trim();
-    const name = document.getElementById('custName').value || 'Customer';
-    const no = document.getElementById('invNo').value;
-    const net = document.getElementById('netAmount').innerText;
-    const paid = document.getElementById('paid').value;
-    const due = document.getElementById('pendingDue').innerText;
-
-    if (!phone) {
-      alert('Please enter a WhatsApp phone number first!');
-      return;
-    }
-
-    const msg = `*DREAM FOCUS PROJECTORS*\n*Order Invoice:* ${no}\nHi ${name},\nTotal: ${net}\n*Paid/Advance:* ₹${paid}\n*Pending Due:* ${due}\nShop Contact: +91 85085 50847`;
-    window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-  }
-
-  function renderHistory() {
-    const b = document.getElementById('historyBody');
-    b.innerHTML = db.length ? '' : '<tr><td colspan="8" class="text-center">No saved bills yet.</td></tr>';
-    db.forEach(i => {
-      b.innerHTML += `
-        <tr>
-          <td><b>${i.no}</b></td>
-          <td>${i.date}</td>
-          <td>${i.name}</td>
-          <td>${i.status}</td>
-          <td class="text-right font-bold">${i.net}</td>
-          <td class="text-right">₹${i.paid}</td>
-          <td class="text-right" style="color:#dc2626; font-weight:bold;">${i.due}</td>
-          <td class="text-center no-print">
-            <button class="btn-del" onclick="deleteHistory('${i.no}')">Delete</button>
-          </td>
-        </tr>
-      `;
+    setHistory(prev => {
+      const idx = prev.findIndex(p => p.invNo === billMeta.invNo);
+      return idx >= 0 ? prev.map((p, i) => i === idx ? record : p) : [record, ...prev];
     });
-  }
+    return record;
+  };
 
-  function deleteHistory(no) {
-    db = db.filter(i => i.no !== no);
-    localStorage.setItem('DFP_OFFLINE_DB', JSON.stringify(db));
-    renderHistory();
-  }
+  // PDF Engine & Native WhatsApp Sharing
+  const sharePDFDirectly = async () => {
+    const record = saveCurrentOrder();
+    const opt = {
+      margin: 6,
+      filename: `${billMeta.invNo.replace(/\//g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
 
-  function newBill() {
-    document.getElementById('custName').value = '';
-    document.getElementById('custPhone').value = '';
-    document.getElementById('custAddr').value = '';
-    document.getElementById('invNo').value = 'DFP/2026/' + Math.floor(1000 + Math.random() * 9000);
-    calc();
-  }
+    try {
+      const element = invoiceRef.current;
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      const pdfFile = new File([pdfBlob], `${record.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
 
-  calc();
+      // Direct WhatsApp File Attachment (Web Share API)
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          files: [pdfFile],
+          title: `Invoice ${record.invNo}`,
+          text: `Order Invoice from DREAM FOCUS PROJECTORS for ${record.custName || 'Customer'}`
+        });
+      } else {
+        // Fallback for Desktop: Auto-download and launch WhatsApp Web
+        html2pdf().set(opt).from(element).save();
+        if (record.custPhone) {
+          const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${record.invNo}\nHi ${record.custName}, your order PDF is generated and downloaded.\n*Net Payable:* ₹${record.netPayable}\n*Paid/Advance:* ₹${record.paid}\n*Pending Due:* ₹${record.pending}\nContact: +91 85085 50847`;
+          window.open(`https://wa.me/91${record.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        } else {
+          alert('PDF Downloaded! Enter a customer phone number to launch WhatsApp directly.');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      window.print();
+    }
+  };
+
+  // Export Analytics to CSV
+  const exportToCSV = () => {
+    let csv = "Invoice No,Date,Customer Name,Phone,Net Total,Paid,Pending Due,Status\n";
+    history.forEach(h => {
+      csv += `"${h.invNo}","${h.date}","${h.custName}","${h.custPhone}",${h.netPayable},${h.paid},${h.pending},"${h.paymentStatus}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `DFP_Sales_Report_${selectedYear}.csv`;
+    a.click();
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      
+      {/* Navigation Header */}
+      <div className="flex gap-3 mb-6 no-print">
+        <button 
+          onClick={() => setTab('create')}
+          className={`flex-1 py-3 font-bold rounded-lg text-sm transition shadow-sm ${tab === 'create' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
+          📝 Generate Order Bill
+        </button>
+        <button 
+          onClick={() => setTab('reports')}
+          className={`flex-1 py-3 font-bold rounded-lg text-sm transition shadow-sm ${tab === 'reports' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
+          📊 Saved Orders & Reports ({history.length})
+        </button>
+      </div>
+
+      {tab === 'create' ? (
+        <div>
+          {/* Printable Invoice Container */}
+          <div ref={invoiceRef} id="invoice-root" className="bg-white rounded-xl shadow-md border border-slate-200 p-6 sm:p-8">
+            
+            {/* Header with Projector Branding */}
+            <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-5 rounded-lg flex justify-between items-center mb-6">
+              <div className="flex items-center gap-4">
+                <ProjectorLogo />
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
+                  <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
+                  <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-amber-400 font-black text-xl tracking-wider block">ORDER INVOICE</span>
+                <span className="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide inline-block mt-1">
+                  {billMeta.paymentStatus} CONFIRMED
+                </span>
+              </div>
+            </div>
+
+            {/* Customer & Invoice Meta Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
+              <div>
+                <h3 className="text-xs font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Billed To (Customer Details)</h3>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Name:</span>
+                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none" placeholder="Enter Customer Name" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
+                  </div>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">WhatsApp:</span>
+                    <input className="flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none" placeholder="10-Digit Mobile Number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
+                  </div>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Address:</span>
+                    <input className="flex-1 bg-transparent border-b border-slate-200 focus:border-sky-500 outline-none" placeholder="Madurai Area / City" value={billMeta.custAddr} onChange={e => setBillMeta({...billMeta, custAddr: e.target.value})} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Invoice Meta</h3>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Invoice No:</span>
+                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none" value={billMeta.invNo} onChange={e => setBillMeta({...billMeta, invNo: e.target.value})} />
+                  </div>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Date:</span>
+                    <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
+                  </div>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Proprietor:</span>
+                    <span className="font-semibold text-slate-800">M. KANAGAVEL</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Items Table */}
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full text-left border border-slate-200 text-xs">
+                <thead>
+                  <tr className="bg-slate-900 text-white uppercase text-[11px]">
+                    <th className="p-2.5 text-center w-10">#</th>
+                    <th className="p-2.5">Item / Service Description</th>
+                    <th className="p-2.5 w-28 text-center">Category</th>
+                    <th className="p-2.5 text-center w-16">Qty</th>
+                    <th className="p-2.5 text-right w-24">Rate (₹)</th>
+                    <th className="p-2.5 text-right w-24">Total (₹)</th>
+                    <th className="p-2.5 text-center w-10 no-print"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {items.map((item, index) => (
+                    <tr key={item.id} className="hover:bg-slate-50">
+                      <td className="p-2 text-center font-bold text-slate-500">{index + 1}</td>
+                      <td className="p-2">
+                        <input className="w-full bg-transparent outline-none font-medium text-slate-800" placeholder="Model name or repair service" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} />
+                      </td>
+                      <td className="p-2 text-center">
+                        <select className="bg-transparent border border-slate-200 rounded px-1 py-0.5 text-[11px] outline-none" value={item.category} onChange={e => updateItem(item.id, 'category', e.target.value)}>
+                          <option value="Sales Unit">Sales Unit</option>
+                          <option value="Service">Service</option>
+                          <option value="Accessory">Accessory</option>
+                        </select>
+                      </td>
+                      <td className="p-2 text-center">
+                        <input type="number" className="w-full text-center bg-transparent outline-none font-semibold" value={item.qty} onChange={e => updateItem(item.id, 'qty', e.target.value)} />
+                      </td>
+                      <td className="p-2 text-right">
+                        <input type="number" className="w-full text-right bg-transparent outline-none font-semibold" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.value)} />
+                      </td>
+                      <td className="p-2 text-right font-bold text-slate-900">
+                        ₹{((Number(item.qty) || 0) * (Number(item.rate) || 0)).toLocaleString('en-IN')}
+                      </td>
+                      <td className="p-2 text-center no-print">
+                        <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700 font-bold">✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <button onClick={addItem} className="no-print bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded text-xs transition mb-6">
+              + Add Item / Service
+            </button>
+
+            {/* Financial Summary & Warranty Terms */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start mb-6">
+              <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-1.5">
+                <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 30-Day Testing Warranty</h4>
+                <p>• 30-day testing warranty covers lamp performance and optical engine clarity.</p>
+                <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing.</p>
+                <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
+                
+                <div className="pt-2 no-print">
+                  <label className="block font-bold text-slate-600 mb-1">Status:</label>
+                  <select className="w-full bg-white border border-slate-300 rounded p-1 text-xs" value={billMeta.paymentStatus} onChange={e => setBillMeta({...billMeta, paymentStatus: e.target.value})}>
+                    <option value="Paid">Full Paid</option>
+                    <option value="Advance">Advance Paid</option>
+                    <option value="Pending">Pending Due</option>
+                    <option value="Exchange">Exchange Unit</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200 text-xs space-y-2 font-medium">
+                <div className="flex justify-between text-slate-600">
+                  <span>Gross Order Total:</span>
+                  <span>₹{grossTotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">Festival Discount (₹):</span>
+                  <input type="number" className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">Old Projector Exchange (₹):</span>
+                  <input type="number" className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
+                </div>
+                <div className="flex justify-between text-slate-900 font-bold border-t border-slate-300 pt-1.5 text-sm">
+                  <span>Net Payable:</span>
+                  <span>₹{netPayable.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center text-sky-700 font-semibold">
+                  <span>Advance Received (₹):</span>
+                  <input type="number" className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold" value={pricing.advance} onChange={e => setPricing({...pricing, advance: e.target.value})} />
+                </div>
+                <div className="flex justify-between text-red-600 font-black border-t-2 border-red-600 pt-1.5 text-sm">
+                  <span>PENDING BALANCE DUE:</span>
+                  <span>₹{pendingDue.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Section: Stamp & Signature */}
+            <div className="flex justify-between items-end border-t border-slate-300 pt-4">
+              <div className="text-[11px] text-slate-500">
+                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
+                <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002</p>
+                <p className="mt-1">Mode: <strong className="text-slate-700">{billMeta.paymentMode}</strong></p>
+              </div>
+
+              <div className="flex items-center gap-6">
+                <RubberStamp status={billMeta.paymentStatus} />
+                <DigitalSignature />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Action Trigger Bar */}
+          <div className="mt-5 flex flex-wrap gap-3 no-print">
+            <button 
+              onClick={sharePDFDirectly} 
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+              📄 Share PDF File to WhatsApp
+            </button>
+            <button 
+              onClick={() => { saveCurrentOrder(); window.print(); }} 
+              className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg shadow transition">
+              💾 Save & Print
+            </button>
+            <button 
+              onClick={() => {
+                setBillMeta({
+                  invNo: `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`,
+                  date: new Date().toISOString().slice(0, 10),
+                  custName: '', custPhone: '', custAddr: '',
+                  paymentStatus: 'Advance', paymentMode: 'GPay / PhonePe UPI'
+                });
+                setItems([{ id: Date.now(), desc: '', category: 'Sales Unit', qty: 1, rate: 0 }]);
+                setPricing({ discount: 0, exchange: 0, advance: 0 });
+              }} 
+              className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-lg transition">
+              🔄 Reset Form
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Saved Analytics Dashboard */
+        <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-bold text-slate-900">Saved Order Transactions & Analytics</h2>
+            <button onClick={exportToCSV} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-2 rounded transition">
+              📥 Export to Excel (CSV)
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="bg-slate-50 border-l-4 border-sky-600 p-3 rounded">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Total Sales</span>
+              <div className="text-lg font-black text-slate-900">
+                ₹{history.reduce((s, h) => s + (h.netPayable || 0), 0).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="bg-slate-50 border-l-4 border-emerald-600 p-3 rounded">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Cash/UPI Collected</span>
+              <div className="text-lg font-black text-emerald-700">
+                ₹{history.reduce((s, h) => s + (Number(h.paid) || 0), 0).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="bg-slate-50 border-l-4 border-red-600 p-3 rounded">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Pending Dues</span>
+              <div className="text-lg font-black text-red-600">
+                ₹{history.reduce((s, h) => s + (Number(h.pending) || 0), 0).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="bg-slate-50 border-l-4 border-purple-600 p-3 rounded">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Trade-In Value</span>
+              <div className="text-lg font-black text-purple-700">
+                ₹{history.reduce((s, h) => s + (Number(h.exchange) || 0), 0).toLocaleString('en-IN')}
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border border-slate-200">
+              <thead className="bg-slate-900 text-white uppercase text-[11px]">
+                <tr>
+                  <th className="p-2">Invoice No</th>
+                  <th className="p-2">Date</th>
+                  <th className="p-2">Customer</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2 text-right">Net</th>
+                  <th className="p-2 text-right">Paid</th>
+                  <th className="p-2 text-right">Due</th>
+                  <th className="p-2 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {history.length === 0 ? (
+                  <tr><td colSpan="8" className="p-4 text-center text-slate-400">No saved orders yet.</td></tr>
+                ) : (
+                  history.map(item => (
+                    <tr key={item.invNo} className="hover:bg-slate-50">
+                      <td className="p-2 font-bold">{item.invNo}</td>
+                      <td className="p-2 text-slate-500">{item.date}</td>
+                      <td className="p-2 font-medium">{item.custName || 'Walk-in'}</td>
+                      <td className="p-2">
+                        <span className="bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded text-[10px]">
+                          {item.paymentStatus}
+                        </span>
+                      </td>
+                      <td className="p-2 text-right font-semibold">₹{item.netPayable?.toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-right text-emerald-700 font-semibold">₹{Number(item.paid)?.toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-right text-red-600 font-black">₹{Number(item.pending)?.toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-center">
+                        <button 
+                          onClick={() => {
+                            setBillMeta({
+                              invNo: item.invNo, date: item.date, custName: item.custName,
+                              custPhone: item.custPhone, custAddr: item.custAddr,
+                              paymentStatus: item.paymentStatus, paymentMode: item.paymentMode
+                            });
+                            setItems(item.items);
+                            setPricing({ discount: item.discount, exchange: item.exchange, advance: item.paid });
+                            setTab('create');
+                          }}
+                          className="text-sky-600 hover:text-sky-800 font-bold mr-2">
+                          Load
+                        </button>
+                        <button 
+                          onClick={() => setHistory(history.filter(h => h.invNo !== item.invNo))}
+                          className="text-red-500 hover:text-red-700 font-bold">
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
-
 </body>
 </html>
