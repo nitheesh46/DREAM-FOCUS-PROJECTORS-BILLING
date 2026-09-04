@@ -3,304 +3,227 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dream Focus Projectors - PDF Billing System</title>
-  <!-- HTML2PDF Library for converting HTML directly to PDF Blob -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <title>DREAM FOCUS PROJECTORS - Billing System</title>
   <style>
     @page { size: A4; margin: 8mm; }
-    :root {
-      --primary: #0284c7;
-      --dark: #0f172a;
-      --success: #16a34a;
-      --warning: #ea580c;
-      --danger: #dc2626;
-      --purple: #9333ea;
-      --bg: #f8fafc;
-      --border: #cbd5e1;
-    }
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-    body { background: var(--bg); margin: 0; padding: 15px; color: #1e293b; }
-    .app-container { max-width: 900px; margin: auto; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background: #f1f5f9; margin: 0; padding: 12px; color: #0f172a; }
+    .container { max-width: 880px; margin: auto; }
 
-    /* Navigation Tabs */
-    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; padding: 12px; background: #e2e8f0; border: none; font-weight: bold; font-size: 14px; cursor: pointer; border-radius: 6px; }
-    .tab-btn.active { background: var(--primary); color: white; }
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tab-btn { flex: 1; padding: 12px; font-size: 14px; font-weight: bold; border: none; border-radius: 6px; background: #e2e8f0; cursor: pointer; }
+    .tab-btn.active { background: #0284c7; color: white; }
 
-    /* Main Invoice Printable Area */
-    .invoice-card { background: #ffffff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid var(--border); margin-bottom: 20px; }
+    /* Card */
+    .card { background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-    /* Header & Branding */
-    .header-bar {
-      background: linear-gradient(135deg, #0f172a 0%, #0369a1 100%);
-      color: #ffffff;
-      padding: 16px 20px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .brand-section { display: flex; align-items: center; gap: 14px; }
-    .brand-title { font-size: 18px; font-weight: 800; margin: 0; letter-spacing: 0.5px; }
-    .brand-tagline { font-size: 10px; color: #38bdf8; margin-top: 2px; font-weight: 600; text-transform: uppercase; }
-    .inv-title-box { text-align: right; }
-    .inv-title { font-size: 20px; font-weight: 900; color: #f59e0b; margin: 0; }
-    .inv-badge { background: #22c55e; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: bold; display: inline-block; margin-top: 4px; }
+    /* Header */
+    .header { background: linear-gradient(135deg, #0f172a 0%, #0369a1 100%); color: white; padding: 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
+    .brand p { margin: 2px 0 0 0; font-size: 10px; color: #38bdf8; text-transform: uppercase; font-weight: 600; }
+    .inv-title { text-align: right; }
+    .inv-title h2 { margin: 0; color: #f59e0b; font-size: 18px; font-weight: 900; }
+    .badge { background: #16a34a; color: white; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 4px; }
 
-    /* Grids & Form Inputs */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
-    .info-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 20px; }
-    .info-title { font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
-    .form-group { display: flex; flex-direction: column; margin-bottom: 8px; }
-    .form-group label { font-size: 11px; font-weight: bold; margin-bottom: 3px; color: #475569; }
-    .form-group input, .form-group select { padding: 7px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; }
+    /* Meta Grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .field { display: flex; flex-direction: column; margin-bottom: 6px; }
+    .field label { font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 2px; }
+    .field input { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; }
 
-    /* Item Table */
-    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-    th, td { border: 1px solid var(--border); padding: 8px; text-align: left; font-size: 12px; }
-    th { background: #0f172a; color: white; text-transform: uppercase; }
-    input.col-input, select.col-input { width: 100%; border: none; padding: 4px; background: transparent; font-size: 12px; }
+    /* Items Table */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+    th { background: #0f172a; color: white; font-size: 11px; text-transform: uppercase; }
+    td input, td select { width: 100%; border: none; background: transparent; font-size: 12px; outline: none; }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
-    .font-bold { font-weight: 700; }
+    .font-bold { font-weight: bold; }
+
+    /* Summary Section */
+    .summary-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; margin-top: 14px; }
+    .terms { background: #f0f9ff; border-left: 3px solid #0284c7; padding: 10px; border-radius: 0 4px 4px 0; font-size: 11px; color: #334155; }
+    .terms h4 { margin: 0 0 4px 0; color: #0284c7; font-size: 12px; }
+    .terms ul { margin: 0; padding-left: 14px; }
+
+    .calc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .calc-table td { padding: 5px 8px; border: none; border-bottom: 1px dashed #e2e8f0; }
+    .calc-table .label { color: #64748b; text-align: right; }
+    .calc-table .val { text-align: right; font-weight: 600; width: 100px; }
+    .calc-table .highlight { font-weight: bold; background: #f8fafc; border-top: 1px solid #94a3b8; border-bottom: 2px solid #0f172a; }
+    .calc-table .due { color: #dc2626; font-weight: 900; font-size: 13px; background: #fef2f2; border-bottom: 2px solid #dc2626; }
+
+    /* Stamp & Signature */
+    .footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #cbd5e1; padding-top: 12px; margin-top: 16px; }
+    .stamp { width: 100px; height: 100px; border: 3px double #1e40af; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(-10deg); color: #1e40af; text-align: center; }
+    .stamp-text { font-size: 6px; font-weight: 900; text-transform: uppercase; }
+    .stamp-status { font-size: 9px; font-weight: 900; color: #dc2626; border-top: 1px solid #1e40af; border-bottom: 1px solid #1e40af; margin: 2px 0; padding: 1px 4px; }
+    .sign-box { text-align: right; }
+    .sign-name { font-weight: bold; font-size: 12px; border-top: 1px solid #0f172a; display: inline-block; padding-top: 3px; width: 160px; text-align: center; }
 
     /* Action Buttons */
-    .btn { padding: 10px 18px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; text-align: center; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-warning { background: var(--warning); color: white; }
-    .btn-danger { background: var(--danger); color: white; padding: 3px 6px; }
-    .btn-purple { background: var(--purple); color: white; }
-
-    /* Financial Calculation */
-    .summary-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 15px; margin-bottom: 20px; }
-    .terms-box { background: #eff6ff; border-left: 4px solid var(--primary); padding: 10px; border-radius: 0 6px 6px 0; font-size: 11px; }
-    .terms-box h4 { margin: 0 0 4px 0; color: #0369a1; font-size: 12px; }
-    .terms-box ul { margin: 0; padding-left: 15px; color: #334155; }
-    
-    .calc-table { width: 100%; border-collapse: collapse; }
-    .calc-table td { padding: 5px 8px; font-size: 12px; border-bottom: 1px dashed var(--border); }
-    .calc-table td.label { color: #64748b; text-align: right; }
-    .calc-table td.value { color: #0f172a; font-weight: 600; text-align: right; width: 110px; }
-    .calc-table tr.highlight td { background: #f1f5f9; font-weight: 700; border-top: 1px solid #94a3b8; border-bottom: 2px solid #0f172a; }
-    .calc-table tr.due td { background: #fef2f2; color: var(--danger); font-weight: 800; font-size: 13px; border-bottom: 2px solid var(--danger); }
-
-    /* Footer Stamp & Signature */
-    .footer-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1px solid var(--border); padding-top: 12px; align-items: flex-end; }
-    
-    .stamp-container { display: flex; justify-content: flex-end; }
-    .rubber-stamp {
-      width: 105px; height: 105px; border: 3px double #1e40af; border-radius: 50%;
-      color: #1e40af; padding: 5px; text-align: center; transform: rotate(-12deg);
-      opacity: 0.88; display: flex; flex-direction: column; justify-content: center;
-      align-items: center; background: rgba(239, 246, 255, 0.2); box-shadow: 0 0 0 1px #1e40af;
-    }
-    .stamp-outer-ring { font-size: 6px; font-weight: 900; text-transform: uppercase; }
-    .stamp-inner-status { font-size: 9.5px; font-weight: 900; color: #b91c1c; border-top: 1px solid #1e40af; border-bottom: 1px solid #1e40af; margin: 2px 0; padding: 1px 3px; }
-    .stamp-location { font-size: 6px; font-weight: 800; }
-
-    .signature-box { text-align: right; }
-    .signature-svg { width: 120px; height: 35px; margin-bottom: -5px; }
-    .sign-title { font-size: 10px; color: #64748b; margin-bottom: 2px; }
-    .sign-name { font-weight: 800; color: #0f172a; font-size: 11px; border-top: 1px solid #0f172a; display: inline-block; padding-top: 2px; width: 150px; }
-
-    /* Dashboard KPI */
-    .kpi-card { background: #fff; padding: 12px; border-radius: 6px; border-left: 4px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .kpi-card h4 { margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; }
-    .kpi-card .value { font-size: 18px; font-weight: bold; color: #0f172a; }
+    .btn { padding: 10px 16px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px; }
+    .btn-sky { background: #0284c7; color: white; }
+    .btn-green { background: #16a34a; color: white; }
+    .btn-dark { background: #334155; color: white; }
+    .btn-del { background: #ef4444; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
 
     @media print {
       body { background: white; padding: 0; }
-      .no-print, .nav-tabs { display: none !important; }
-      .invoice-card { box-shadow: none; border: none; padding: 0; }
-      input, select { border: none !important; background: transparent !important; }
+      .no-print, .tabs { display: none !important; }
+      .card { border: none; box-shadow: none; padding: 0; }
     }
   </style>
 </head>
 <body>
 
-<div class="app-container">
-
-  <!-- Navigation Tabs -->
-  <div class="nav-tabs no-print">
-    <button class="tab-btn active" onclick="switchTab('create-bill')">📝 Create Order Bill</button>
-    <button class="tab-btn" onclick="switchTab('reports')">📊 Saved Orders & Revenue Reports</button>
+<div class="container">
+  
+  <div class="tabs no-print">
+    <button class="tab-btn active" onclick="setTab('create')">📝 Create Order Bill</button>
+    <button class="tab-btn" onclick="setTab('history')">📊 Saved Orders & Records</button>
   </div>
 
-  <!-- TAB 1: CREATE & SHARE BILL -->
-  <div id="tab-create-bill" class="tab-content">
-    
-    <!-- Printable Invoice Container -->
-    <div class="invoice-card" id="invoiceArea">
+  <!-- TAB 1: BILLING FORM -->
+  <div id="tab-create">
+    <div class="card" id="billArea">
       
-      <!-- Header Bar with Embedded Logo -->
-      <div class="header-bar">
-        <div class="brand-section">
-          <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Header -->
+      <div class="header">
+        <div class="brand">
+          <svg width="42" height="42" viewBox="0 0 100 100" fill="none">
             <rect width="100" height="100" rx="20" fill="#0284C7"/>
             <rect x="15" y="38" width="55" height="30" rx="6" fill="#FFFFFF"/>
             <circle cx="35" cy="53" r="9" fill="#0F172A" stroke="#38BDF8" stroke-width="3"/>
             <circle cx="35" cy="53" r="4" fill="#F59E0B"/>
-            <path d="M68 46L90 32V74L68 60V46Z" fill="#F59E0B" opacity="0.9"/>
-            <line x1="52" y1="45" x2="52" y2="61" stroke="#0284C7" stroke-width="2.5" stroke-linecap="round"/>
-            <line x1="58" y1="45" x2="58" y2="61" stroke="#0284C7" stroke-width="2.5" stroke-linecap="round"/>
-            <rect x="22" y="68" width="6" height="4" rx="1" fill="#FFFFFF"/>
-            <rect x="54" y="68" width="6" height="4" rx="1" fill="#FFFFFF"/>
+            <path d="M68 46L90 32V74L68 60V46Z" fill="#F59E0B"/>
+            <line x1="52" y1="45" x2="52" y2="61" stroke="#0284C7" stroke-width="2.5"/>
+            <line x1="58" y1="45" x2="58" y2="61" stroke="#0284C7" stroke-width="2.5"/>
+            <rect x="22" y="68" width="6" height="4" fill="#FFFFFF"/>
+            <rect x="54" y="68" width="6" height="4" fill="#FFFFFF"/>
           </svg>
           <div>
-            <h1 class="brand-title">DREAM FOCUS PROJECTORS</h1>
-            <div class="brand-tagline">Sales • Chip-Level Service • Pre-Owned & New Projectors</div>
+            <h1>DREAM FOCUS PROJECTORS</h1>
+            <p>Sales • Chip-Level Repair • Pre-Owned Projectors</p>
           </div>
         </div>
-        <div class="inv-title-box">
-          <h2 class="inv-title">ORDER BILL</h2>
-          <div class="inv-badge" id="badgeStatus">ORDER CONFIRMED</div>
+        <div class="inv-title">
+          <h2>ORDER BILL</h2>
+          <span class="badge" id="displayStatus">ADVANCE CONFIRMED</span>
         </div>
       </div>
 
       <!-- Customer & Bill Meta -->
-      <div class="info-card">
-        <div class="grid-2">
-          <div>
-            <div class="info-title">Billed To (Customer Details)</div>
-            <div class="form-group"><label>Customer Name:</label><input type="text" id="custName" placeholder="Customer Name"></div>
-            <div class="form-group"><label>WhatsApp Phone:</label><input type="tel" id="custPhone" placeholder="e.g. 9842178905"></div>
-            <div class="form-group"><label>Delivery Address:</label><input type="text" id="custAddr" placeholder="Madurai Area / City"></div>
-          </div>
-          <div>
-            <div class="info-title">Invoice & Shop Details</div>
-            <div class="form-group"><label>Invoice No:</label><input type="text" id="invNo"></div>
-            <div class="form-group"><label>Date:</label><input type="date" id="invDate"></div>
-            <div class="form-group"><label>Proprietor / Contact:</label><input type="text" value="M. KANAGAVEL | +91 85085 50847" readonly style="background:#f1f5f9;"></div>
-          </div>
+      <div class="grid-2">
+        <div>
+          <div class="field"><label>Customer Name:</label><input type="text" id="custName" placeholder="Enter Customer Name"></div>
+          <div class="field"><label>WhatsApp Mobile:</label><input type="tel" id="custPhone" placeholder="10-digit number"></div>
+          <div class="field"><label>Delivery Area:</label><input type="text" id="custAddr" placeholder="Madurai Area / City"></div>
+        </div>
+        <div>
+          <div class="field"><label>Invoice No:</label><input type="text" id="invNo"></div>
+          <div class="field"><label>Date:</label><input type="date" id="invDate"></div>
+          <div class="field"><label>Proprietor Contact:</label><input type="text" value="M. KANAGAVEL | +91 85085 50847" readonly style="background:#f1f5f9;"></div>
         </div>
       </div>
 
-      <!-- Itemized Table -->
-      <table id="itemsTable">
+      <!-- Item Table -->
+      <table id="itemTable">
         <thead>
           <tr>
-            <th style="width: 6%;" class="text-center">S.No</th>
-            <th style="width: 44%;">Item / Order Description</th>
-            <th style="width: 16%;" class="text-center">Category</th>
-            <th style="width: 8%;" class="text-center">Qty</th>
-            <th style="width: 13%;" class="text-right">Rate (₹)</th>
+            <th style="width: 5%;" class="text-center">#</th>
+            <th style="width: 45%;">Item / Service Details</th>
+            <th style="width: 15%;" class="text-center">Category</th>
+            <th style="width: 10%;" class="text-center">Qty</th>
+            <th style="width: 12%;" class="text-right">Rate (₹)</th>
             <th style="width: 13%;" class="text-right">Total (₹)</th>
-            <th class="no-print" style="width: 4%;"></th>
+            <th style="width: 4%;" class="no-print"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="itemBody">
           <tr>
-            <td class="text-center font-bold row-sno">1</td>
-            <td><input type="text" class="col-input item-desc" value="Epson EB-X41 Pre-Owned Projector (3600 Lumens)"></td>
+            <td class="text-center">1</td>
+            <td><input type="text" value="Epson EB-X41 Pre-Owned Projector (3600 Lumens)"></td>
             <td>
-              <select class="col-input item-cat">
+              <select>
                 <option value="Sales Unit">Sales Unit</option>
                 <option value="Service">Service</option>
                 <option value="Accessory">Accessory</option>
               </select>
             </td>
-            <td><input type="number" class="col-input qty text-center" value="1" oninput="calculateBill()"></td>
-            <td><input type="number" class="col-input rate text-right" value="14500" oninput="calculateBill()"></td>
-            <td class="amount text-right font-bold">14500.00</td>
-            <td class="no-print"><button class="btn btn-danger" onclick="removeRow(this)">X</button></td>
+            <td><input type="number" class="text-center qty" value="1" oninput="calc()"></td>
+            <td><input type="number" class="text-right rate" value="14500" oninput="calc()"></td>
+            <td class="text-right font-bold row-total">14500.00</td>
+            <td class="no-print text-center"><button class="btn-del" onclick="deleteRow(this)">✕</button></td>
           </tr>
         </tbody>
       </table>
 
-      <button class="btn btn-primary no-print" onclick="addRow()">+ Add Item</button>
+      <button class="btn btn-sky no-print" onclick="addRow()">+ Add Item / Service</button>
 
-      <!-- Financial Calculation & Terms -->
-      <div class="summary-grid" style="margin-top: 15px;">
-        <div class="terms-box">
-          <h4>🛡️ Service & Testing Warranty Terms</h4>
+      <!-- Summary & Terms -->
+      <div class="summary-grid">
+        <div class="terms">
+          <h4>🛡️ 30-Day Testing Warranty Terms</h4>
           <ul>
-            <li><strong>Testing Warranty:</strong> 30 Days testing warranty on pre-owned units.</li>
-            <li><strong>Diagnostics:</strong> Free optical checkup for future servicing & bulbs.</li>
-            <li><strong>Exclusions:</strong> Physical damage, power surges, and water ingress.</li>
+            <li>30-day testing warranty covers lamp clarity and motherboard.</li>
+            <li>Free testing diagnostics for future maintenance.</li>
+            <li>Physical impact and water damage are not covered.</li>
           </ul>
-          
-          <div style="margin-top: 10px;" class="no-print">
-            <div class="form-group">
-              <label>Payment Category / Status:</label>
-              <select id="paymentStatus" onchange="calculateBill()">
-                <option value="Paid">Full Paid</option>
-                <option value="Advance" selected>Advance Paid (Deposit)</option>
-                <option value="Pending">Pending / Credit Due</option>
-                <option value="Exchange">Exchange Unit Trade-In</option>
-                <option value="Return">Return / Refund Issued</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Payment Mode:</label>
-              <select id="paymentMode">
-                <option value="GPay / PhonePe / UPI">GPay / PhonePe / UPI</option>
-                <option value="Cash">Cash</option>
-                <option value="Bank Transfer">Bank Transfer / NEFT</option>
-              </select>
-            </div>
+          <div class="no-print" style="margin-top:8px;">
+            <label style="font-size:11px; font-weight:bold;">Payment Status:</label>
+            <select id="paymentStatus" onchange="calc()" style="width:100%; padding:5px; margin-top:3px;">
+              <option value="Advance">Advance Paid</option>
+              <option value="Full Paid">Full Paid</option>
+              <option value="Pending">Pending / Balance Due</option>
+              <option value="Exchange">Exchange Unit</option>
+            </select>
           </div>
         </div>
 
         <div>
           <table class="calc-table">
-            <tr>
-              <td class="label">Gross Order Total:</td>
-              <td class="value" id="grossTotal">₹14,500.00</td>
-            </tr>
+            <tr><td class="label">Gross Total:</td><td class="val" id="grossTotal">₹14,500.00</td></tr>
             <tr>
               <td class="label">Discount (₹):</td>
-              <td class="value"><input type="number" id="discount" value="500" class="text-right" style="width:80px;" oninput="calculateBill()"></td>
+              <td class="val"><input type="number" id="discount" value="500" class="text-right" style="width:80px;" oninput="calc()"></td>
             </tr>
             <tr>
-              <td class="label">Old Unit Exchange (₹):</td>
-              <td class="value"><input type="number" id="exchangeVal" value="1000" class="text-right" style="width:80px;" oninput="calculateBill()"></td>
+              <td class="label">Exchange Old Unit (₹):</td>
+              <td class="val"><input type="number" id="exchange" value="1000" class="text-right" style="width:80px;" oninput="calc()"></td>
             </tr>
-            <tr class="highlight">
-              <td class="label">Net Payable Amount:</td>
-              <td class="value" id="netAmount">₹13,000.00</td>
-            </tr>
+            <tr class="highlight"><td class="label">Net Total:</td><td class="val" id="netAmount">₹13,000.00</td></tr>
             <tr>
-              <td class="label" style="color:var(--primary);">Advance Paid (₹):</td>
-              <td class="value"><input type="number" id="paidAmt" value="5000" class="text-right" style="width:80px;" oninput="calculateBill()"></td>
+              <td class="label" style="color:#0284c7;">Advance Paid (₹):</td>
+              <td class="val"><input type="number" id="paid" value="5000" class="text-right" style="width:80px;" oninput="calc()"></td>
             </tr>
-            <tr class="due">
-              <td class="label" style="color:var(--danger);">PENDING BALANCE DUE:</td>
-              <td class="value" id="pendingDue">₹8,000.00</td>
-            </tr>
+            <tr class="due"><td class="label">PENDING BALANCE:</td><td class="val" id="pendingDue">₹8,000.00</td></tr>
           </table>
         </div>
       </div>
 
-      <!-- Footer Stamp & Signature -->
-      <div class="footer-section">
-        <div>
-          <div style="font-size: 11px; color: #64748b;">
-            Shop Address: <strong>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002</strong><br>
-            Thank you for choosing <strong>DREAM FOCUS PROJECTORS</strong>!
-          </div>
+      <!-- Footer Stamp & Sign -->
+      <div class="footer">
+        <div style="font-size:10px; color:#64748b;">
+          <strong>DREAM FOCUS PROJECTORS</strong><br>
+          No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002<br>
+          Phone / WhatsApp: +91 85085 50847
         </div>
 
-        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
-          <!-- Rubber Stamp -->
-          <div class="stamp-container">
-            <div class="rubber-stamp">
-              <div class="stamp-outer-ring">★ DREAM FOCUS PROJECTORS ★</div>
-              <div class="stamp-inner-status" id="stampText">VERIFIED & PAID</div>
-              <div class="stamp-location">MADURAI - 625002</div>
-            </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div class="stamp">
+            <span class="stamp-text">★ DREAM FOCUS ★<br>PROJECTORS</span>
+            <span class="stamp-status" id="stampStatus">VERIFIED</span>
+            <span class="stamp-text">MADURAI</span>
           </div>
 
-          <!-- Authorized Signature -->
-          <div class="signature-box">
-            <div class="sign-title">For DREAM FOCUS PROJECTORS</div>
-            <svg class="signature-svg" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div class="sign-box">
+            <svg width="130" height="35" viewBox="0 0 200 60" fill="none">
               <path d="M15 42 C 25 15, 35 10, 42 35 C 48 50, 52 20, 65 28 C 75 35, 80 22, 92 32 C 100 38, 110 18, 125 35 C 135 45, 140 15, 155 30 C 165 40, 175 25, 185 32" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
               <path d="M10 48 Q 90 52 190 44" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <br>
+            </svg><br>
             <div class="sign-name">M. KANAGAVEL (Proprietor)</div>
           </div>
         </div>
@@ -308,347 +231,188 @@
 
     </div>
 
-    <!-- Actions Control Bar -->
-    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;" class="no-print">
-      <button class="btn btn-purple" onclick="sharePDFToWhatsApp()">📄 Share PDF File to WhatsApp</button>
-      <button class="btn btn-success" onclick="saveAndPrintInvoice()">💾 Save Bill & Download PDF</button>
-      <button class="btn btn-warning" onclick="resetForm()">🔄 New Bill</button>
+    <!-- Action Bar -->
+    <div style="margin-top:14px; display:flex; gap:10px;" class="no-print">
+      <button class="btn btn-green" onclick="saveAndPrint()">🖨️ Save Bill & Print PDF</button>
+      <button class="btn btn-sky" onclick="shareWhatsApp()">💬 Share Bill to WhatsApp</button>
+      <button class="btn btn-dark" onclick="newBill()">🔄 New Bill</button>
     </div>
-
   </div>
 
-  <!-- TAB 2: SAVED ORDERS HISTORY -->
-  <div id="tab-reports" class="tab-content" style="display: none;">
-    <div class="invoice-card">
-      <h3>📊 Saved Order Bills & Revenue Reports</h3>
-
-      <div class="grid-2 no-print" style="margin-bottom: 20px;">
-        <div class="form-group">
-          <label>Filter by Year</label>
-          <select id="filterYear" onchange="renderReports()">
-            <option value="ALL">All Years</option>
-            <option value="2026" selected>2026</option>
-            <option value="2027">2027</option>
-          </select>
-        </div>
-        <div class="form-group" style="justify-content: flex-end;">
-          <button class="btn btn-primary" onclick="exportToCSV()">📥 Export All Orders to Excel (CSV)</button>
-        </div>
-      </div>
-
-      <div class="grid-4" style="margin-bottom: 20px;">
-        <div class="kpi-card" style="border-left-color: var(--primary);">
-          <h4>Total Sales Value</h4>
-          <div class="value" id="kpiTotalSales">₹0</div>
-        </div>
-        <div class="kpi-card" style="border-left-color: var(--success);">
-          <h4>Total Cash/UPI Collected</h4>
-          <div class="value" id="kpiTotalCollected">₹0</div>
-        </div>
-        <div class="kpi-card" style="border-left-color: var(--danger);">
-          <h4>Total Pending Dues</h4>
-          <div class="value" id="kpiTotalPending">₹0</div>
-        </div>
-        <div class="kpi-card" style="border-left-color: var(--purple);">
-          <h4>Trade-In / Exchange Credit</h4>
-          <div class="value" id="kpiTotalExchange">₹0</div>
-        </div>
-      </div>
-
-      <h4>Saved Order History</h4>
-      <div style="overflow-x: auto;">
-        <table id="historyTable">
-          <thead>
-            <tr>
-              <th>Inv No</th>
-              <th>Date</th>
-              <th>Customer Name</th>
-              <th>Status</th>
-              <th>Net Total</th>
-              <th>Paid/Advance</th>
-              <th>Pending Due</th>
-              <th class="no-print">Action</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody">
-            <!-- Loaded dynamically -->
-          </tbody>
-        </table>
-      </div>
+  <!-- TAB 2: SAVED RECORDS -->
+  <div id="tab-history" style="display:none;">
+    <div class="card">
+      <h3 style="margin-top:0;">Saved Bills Database</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Inv No</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th class="text-right">Net</th>
+            <th class="text-right">Paid</th>
+            <th class="text-right">Due</th>
+            <th class="text-center no-print">Action</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
     </div>
   </div>
 
 </div>
 
 <script>
-  const STORAGE_KEY = 'DFP_ORDER_BILLS_DATA_V3';
-  let invoices = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  let db = JSON.parse(localStorage.getItem('DFP_OFFLINE_DB') || '[]');
 
-  // Auto Init
   document.getElementById('invDate').valueAsDate = new Date();
   document.getElementById('invNo').value = 'DFP/2026/' + Math.floor(1000 + Math.random() * 9000);
 
-  function switchTab(tab) {
+  function setTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-    if(tab === 'create-bill') {
+    if (tab === 'create') {
       document.querySelectorAll('.tab-btn')[0].classList.add('active');
-      document.getElementById('tab-create-bill').style.display = 'block';
+      document.getElementById('tab-create').style.display = 'block';
+      document.getElementById('tab-history').style.display = 'none';
     } else {
       document.querySelectorAll('.tab-btn')[1].classList.add('active');
-      document.getElementById('tab-reports').style.display = 'block';
-      renderReports();
+      document.getElementById('tab-create').style.display = 'none';
+      document.getElementById('tab-history').style.display = 'block';
+      renderHistory();
     }
   }
 
-  function updateRowNumbers() {
-    const rows = document.querySelectorAll('#itemsTable tbody tr');
-    rows.forEach((row, index) => {
-      row.querySelector('.row-sno').innerText = index + 1;
-    });
-  }
-
   function addRow() {
-    const table = document.getElementById('itemsTable').getElementsByTagName('tbody')[0];
-    const row = table.insertRow();
-    row.innerHTML = `
-      <td class="text-center font-bold row-sno">1</td>
-      <td><input type="text" class="col-input item-desc" placeholder="Item name / service"></td>
+    const tbody = document.getElementById('itemBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="text-center">${tbody.rows.length + 1}</td>
+      <td><input type="text" placeholder="Projector model or service description"></td>
       <td>
-        <select class="col-input item-cat">
+        <select>
           <option value="Sales Unit">Sales Unit</option>
           <option value="Service">Service</option>
           <option value="Accessory">Accessory</option>
         </select>
       </td>
-      <td><input type="number" class="col-input qty text-center" value="1" oninput="calculateBill()"></td>
-      <td><input type="number" class="col-input rate text-right" value="0" oninput="calculateBill()"></td>
-      <td class="amount text-right font-bold">0.00</td>
-      <td class="no-print"><button class="btn btn-danger" onclick="removeRow(this)">X</button></td>
+      <td><input type="number" class="text-center qty" value="1" oninput="calc()"></td>
+      <td><input type="number" class="text-right rate" value="0" oninput="calc()"></td>
+      <td class="text-right font-bold row-total">0.00</td>
+      <td class="no-print text-center"><button class="btn-del" onclick="deleteRow(this)">✕</button></td>
     `;
-    updateRowNumbers();
-    calculateBill();
+    tbody.appendChild(tr);
+    calc();
   }
 
-  function removeRow(btn) {
-    const row = btn.parentNode.parentNode;
-    row.parentNode.removeChild(row);
-    updateRowNumbers();
-    calculateBill();
+  function deleteRow(btn) {
+    btn.closest('tr').remove();
+    const rows = document.querySelectorAll('#itemBody tr');
+    rows.forEach((r, i) => r.cells[0].innerText = i + 1);
+    calc();
   }
 
-  function calculateBill() {
-    const rows = document.querySelectorAll('#itemsTable tbody tr');
+  function calc() {
     let gross = 0;
-
-    rows.forEach(row => {
-      const qty = parseFloat(row.querySelector('.qty').value) || 0;
-      const rate = parseFloat(row.querySelector('.rate').value) || 0;
-      const total = qty * rate;
-      row.querySelector('.amount').innerText = total.toFixed(2);
-      gross += total;
+    document.querySelectorAll('#itemBody tr').forEach(row => {
+      const q = parseFloat(row.querySelector('.qty').value) || 0;
+      const r = parseFloat(row.querySelector('.rate').value) || 0;
+      const t = q * r;
+      row.querySelector('.row-total').innerText = t.toFixed(2);
+      gross += t;
     });
 
-    const discount = parseFloat(document.getElementById('discount').value) || 0;
-    const exchange = parseFloat(document.getElementById('exchangeVal').value) || 0;
-    const paid = parseFloat(document.getElementById('paidAmt').value) || 0;
+    const disc = parseFloat(document.getElementById('discount').value) || 0;
+    const exch = parseFloat(document.getElementById('exchange').value) || 0;
+    const paid = parseFloat(document.getElementById('paid').value) || 0;
 
-    const net = Math.max(0, gross - discount - exchange);
+    const net = Math.max(0, gross - disc - exch);
     const pending = Math.max(0, net - paid);
 
     document.getElementById('grossTotal').innerText = '₹' + gross.toFixed(2);
     document.getElementById('netAmount').innerText = '₹' + net.toFixed(2);
     document.getElementById('pendingDue').innerText = '₹' + pending.toFixed(2);
 
-    const status = document.getElementById('paymentStatus').value;
-    document.getElementById('badgeStatus').innerText = status.toUpperCase() + ' CONFIRMED';
-    document.getElementById('stampText').innerText = pending <= 0 ? 'FULL PAID' : 'ADVANCE & PAID';
+    const st = document.getElementById('paymentStatus').value;
+    document.getElementById('displayStatus').innerText = st.toUpperCase() + ' CONFIRMED';
+    document.getElementById('stampStatus').innerText = pending <= 0 ? 'PAID FULL' : 'VERIFIED';
   }
 
-  function saveInvoiceRecord() {
-    const invNo = document.getElementById('invNo').value;
-    const date = document.getElementById('invDate').value;
-    const name = document.getElementById('custName').value || 'Walk-in Customer';
-    const phone = document.getElementById('custPhone').value || '';
-    const address = document.getElementById('custAddr').value || '';
-
-    const gross = parseFloat(document.getElementById('grossTotal').innerText.replace('₹','')) || 0;
-    const discount = parseFloat(document.getElementById('discount').value) || 0;
-    const exchange = parseFloat(document.getElementById('exchangeVal').value) || 0;
-    const net = parseFloat(document.getElementById('netAmount').innerText.replace('₹','')) || 0;
-    const paid = parseFloat(document.getElementById('paidAmt').value) || 0;
-    const pending = parseFloat(document.getElementById('pendingDue').innerText.replace('₹','')) || 0;
-    const status = document.getElementById('paymentStatus').value;
-    const mode = document.getElementById('paymentMode').value;
-
-    const orderRecord = {
-      invNo, date, name, phone, address, gross, discount, exchange, net, paid, pending, status, mode,
-      timestamp: new Date().getTime()
+  function saveRecord() {
+    const inv = {
+      no: document.getElementById('invNo').value,
+      date: document.getElementById('invDate').value,
+      name: document.getElementById('custName').value || 'Customer',
+      phone: document.getElementById('custPhone').value,
+      net: document.getElementById('netAmount').innerText,
+      paid: document.getElementById('paid').value,
+      due: document.getElementById('pendingDue').innerText,
+      status: document.getElementById('paymentStatus').value
     };
-
-    const existingIndex = invoices.findIndex(i => i.invNo === invNo);
-    if(existingIndex >= 0) {
-      invoices[existingIndex] = orderRecord;
-    } else {
-      invoices.push(orderRecord);
-    }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
+    db = db.filter(i => i.no !== inv.no);
+    db.unshift(inv);
+    localStorage.setItem('DFP_OFFLINE_DB', JSON.stringify(db));
   }
 
-  function saveAndPrintInvoice() {
-    saveInvoiceRecord();
-    alert('Bill saved in device memory!');
+  function saveAndPrint() {
+    saveRecord();
     window.print();
   }
 
-  /* DIRECT PDF FILE SHARE TO WHATSAPP FUNCTION */
-  async function sharePDFToWhatsApp() {
-    saveInvoiceRecord();
+  function shareWhatsApp() {
+    saveRecord();
+    const phone = document.getElementById('custPhone').value.trim();
+    const name = document.getElementById('custName').value || 'Customer';
+    const no = document.getElementById('invNo').value;
+    const net = document.getElementById('netAmount').innerText;
+    const paid = document.getElementById('paid').value;
+    const due = document.getElementById('pendingDue').innerText;
 
-    const element = document.getElementById('invoiceArea');
-    const invNo = document.getElementById('invNo').value || 'DFP_Invoice';
-    const cleanInvNo = invNo.replace(/\//g, '_');
-
-    // Temporarily hide elements marked with 'no-print'
-    const noPrintEls = document.querySelectorAll('.no-print');
-    noPrintEls.forEach(el => el.style.display = 'none');
-
-    const opt = {
-      margin: 4,
-      filename: `${cleanInvNo}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    try {
-      // Generate PDF as Blob
-      const pdfWorker = html2pdf().set(opt).from(element);
-      const pdfBlob = await pdfWorker.output('blob');
-
-      // Restore 'no-print' elements
-      noPrintEls.forEach(el => el.style.display = '');
-
-      const pdfFile = new File([pdfBlob], `${cleanInvNo}.pdf`, { type: 'application/pdf' });
-
-      // Use Web Share API (Mobile Web Browsers support sharing files directly to WhatsApp)
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          files: [pdfFile],
-          title: `Order Bill - ${invNo}`,
-          text: `Invoice ${invNo} from DREAM FOCUS PROJECTORS`
-        });
-      } else {
-        // Fallback for Desktop/PC browsers
-        html2pdf().set(opt).from(element).save();
-        alert('PDF Downloaded! Desktop browsers cannot attach files directly to WhatsApp. Please attach the downloaded PDF in WhatsApp Web.');
-        
-        const phone = document.getElementById('custPhone').value.trim();
-        if(phone) {
-          const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${invNo}\nPlease find attached PDF bill for your order.\nContact: +91 85085 50847`;
-          window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-      }
-    } catch (err) {
-      console.error('PDF Generation Error:', err);
-      noPrintEls.forEach(el => el.style.display = '');
-      alert('Unable to generate PDF directly. Please use the Save/Print button.');
+    if (!phone) {
+      alert('Please enter a WhatsApp phone number first!');
+      return;
     }
+
+    const msg = `*DREAM FOCUS PROJECTORS*\n*Order Invoice:* ${no}\nHi ${name},\nTotal: ${net}\n*Paid/Advance:* ₹${paid}\n*Pending Due:* ${due}\nShop Contact: +91 85085 50847`;
+    window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  function renderReports() {
-    const year = document.getElementById('filterYear').value;
-    const tbody = document.getElementById('historyBody');
-    tbody.innerHTML = '';
-
-    let salesSum = 0, collectedSum = 0, pendingSum = 0, exchangeSum = 0;
-
-    const filtered = invoices.filter(inv => {
-      if(!inv.date) return true;
-      const [y] = inv.date.split('-');
-      return (year === 'ALL' || y === year);
-    });
-
-    filtered.forEach(inv => {
-      salesSum += inv.net;
-      collectedSum += inv.paid;
-      pendingSum += inv.pending;
-      exchangeSum += inv.exchange;
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${inv.invNo}</b></td>
-        <td>${inv.date}</td>
-        <td>${inv.name}</td>
-        <td><span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:bold;">${inv.status}</span></td>
-        <td>₹${inv.net.toFixed(2)}</td>
-        <td>₹${inv.paid.toFixed(2)}</td>
-        <td style="color:var(--danger); font-weight:bold;">₹${inv.pending.toFixed(2)}</td>
-        <td class="no-print">
-          <button class="btn btn-primary" style="padding:2px 6px;" onclick="viewOrder('${inv.invNo}')">Check</button>
-          <button class="btn btn-danger" onclick="deleteInvoice('${inv.invNo}')">Delete</button>
-        </td>
+  function renderHistory() {
+    const b = document.getElementById('historyBody');
+    b.innerHTML = db.length ? '' : '<tr><td colspan="8" class="text-center">No saved bills yet.</td></tr>';
+    db.forEach(i => {
+      b.innerHTML += `
+        <tr>
+          <td><b>${i.no}</b></td>
+          <td>${i.date}</td>
+          <td>${i.name}</td>
+          <td>${i.status}</td>
+          <td class="text-right font-bold">${i.net}</td>
+          <td class="text-right">₹${i.paid}</td>
+          <td class="text-right" style="color:#dc2626; font-weight:bold;">${i.due}</td>
+          <td class="text-center no-print">
+            <button class="btn-del" onclick="deleteHistory('${i.no}')">Delete</button>
+          </td>
+        </tr>
       `;
-      tbody.appendChild(tr);
     });
-
-    document.getElementById('kpiTotalSales').innerText = '₹' + salesSum.toLocaleString('en-IN');
-    document.getElementById('kpiTotalCollected').innerText = '₹' + collectedSum.toLocaleString('en-IN');
-    document.getElementById('kpiTotalPending').innerText = '₹' + pendingSum.toLocaleString('en-IN');
-    document.getElementById('kpiTotalExchange').innerText = '₹' + exchangeSum.toLocaleString('en-IN');
   }
 
-  function viewOrder(invNo) {
-    const inv = invoices.find(i => i.invNo === invNo);
-    if(inv) {
-      document.getElementById('invNo').value = inv.invNo;
-      document.getElementById('invDate').value = inv.date;
-      document.getElementById('custName').value = inv.name;
-      document.getElementById('custPhone').value = inv.phone;
-      document.getElementById('custAddr').value = inv.address;
-      document.getElementById('discount').value = inv.discount;
-      document.getElementById('exchangeVal').value = inv.exchange;
-      document.getElementById('paidAmt').value = inv.paid;
-      document.getElementById('paymentStatus').value = inv.status;
-      switchTab('create-bill');
-      calculateBill();
-    }
+  function deleteHistory(no) {
+    db = db.filter(i => i.no !== no);
+    localStorage.setItem('DFP_OFFLINE_DB', JSON.stringify(db));
+    renderHistory();
   }
 
-  function deleteInvoice(invNo) {
-    if(confirm(`Delete invoice ${invNo}?`)) {
-      invoices = invoices.filter(i => i.invNo !== invNo);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
-      renderReports();
-    }
-  }
-
-  function resetForm() {
+  function newBill() {
     document.getElementById('custName').value = '';
     document.getElementById('custPhone').value = '';
     document.getElementById('custAddr').value = '';
     document.getElementById('invNo').value = 'DFP/2026/' + Math.floor(1000 + Math.random() * 9000);
-    document.getElementById('discount').value = '0';
-    document.getElementById('exchangeVal').value = '0';
-    document.getElementById('paidAmt').value = '0';
-    calculateBill();
+    calc();
   }
 
-  function exportToCSV() {
-    let csv = 'Invoice No,Date,Customer Name,Phone,Net Total,Paid,Pending,Status\n';
-    invoices.forEach(i => {
-      csv += `"${i.invNo}","${i.date}","${i.name}","${i.phone}",${i.net},${i.paid},${i.pending},"${i.status}"\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `DFP_Order_Bills_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-  }
-
-  calculateBill();
+  calc();
 </script>
 
 </body>
