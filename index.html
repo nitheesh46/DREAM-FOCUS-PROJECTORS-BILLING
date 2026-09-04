@@ -10,7 +10,7 @@
   <!-- React 18 & ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel for JSX compilation in-browser -->
+  <!-- Babel for in-browser JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- HTML2PDF Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -45,11 +45,11 @@ const ProjectorLogo = () => (
   </svg>
 );
 
-const RubberStamp = ({ status }) => (
+const RubberStamp = ({ isPaid }) => (
   <div className="w-28 h-28 rounded-full border-4 border-double border-blue-800 text-blue-900 p-2 flex flex-col items-center justify-center -rotate-12 select-none opacity-85 shadow-[0_0_0_1px_#1e40af] bg-blue-50/20">
     <span className="text-[7px] font-black tracking-widest text-center leading-tight uppercase">★ DREAM FOCUS ★<br/>PROJECTORS</span>
-    <span className="text-[10px] font-extrabold text-red-700 border-y-2 border-blue-800 my-0.5 px-2 tracking-wider uppercase">
-      {status === 'Paid' ? 'PAID FULL' : 'VERIFIED'}
+    <span className={`text-[10px] font-extrabold border-y-2 border-blue-800 my-0.5 px-2 tracking-wider uppercase ${isPaid ? 'text-emerald-700' : 'text-amber-700'}`}>
+      {isPaid ? 'PAID FULL' : 'ADVANCE RECVD'}
     </span>
     <span className="text-[7px] font-bold tracking-wider">MADURAI - 625002</span>
   </div>
@@ -80,7 +80,7 @@ function App() {
     custName: '',
     custPhone: '',
     custAddr: '',
-    paymentStatus: 'Advance',
+    paymentStatus: 'Advance Paid',
     paymentMode: 'GPay / PhonePe UPI'
   });
 
@@ -100,8 +100,28 @@ function App() {
 
   // Dynamic Calculations
   const grossTotal = useMemo(() => items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.rate) || 0), 0), [items]);
-  const netPayable = useMemo(() => Math.max(0, grossTotal - (Number(pricing.discount) || 0) - (Number(pricing.exchange) || 0)), [grossTotal, pricing]);
-  const pendingDue = useMemo(() => Math.max(0, netPayable - (Number(pricing.advance) || 0)), [netPayable, pricing.advance]);
+  const netPayable = useMemo(() => Math.max(0, grossTotal - (Number(pricing.discount) || 0) - (Number(pricing.exchange) || 0)), [grossTotal, pricing.discount, pricing.exchange]);
+  
+  // Pending calculation: correctly checks numeric paid amount
+  const pendingDue = useMemo(() => {
+    const paidVal = pricing.advance === '' ? 0 : Number(pricing.advance);
+    return Math.max(0, netPayable - paidVal);
+  }, [netPayable, pricing.advance]);
+
+  // Handle status changes cleanly & auto-sync payment values
+  const handleStatusChange = (status) => {
+    setBillMeta(prev => ({ ...prev, paymentStatus: status }));
+    if (status === 'Full Paid') {
+      setPricing(prev => ({ ...prev, advance: netPayable }));
+    } else if (status === 'Pending (Zero Advance)') {
+      setPricing(prev => ({ ...prev, advance: 0 }));
+    }
+  };
+
+  const handleSetFullPayment = () => {
+    setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
+    setPricing(prev => ({ ...prev, advance: netPayable }));
+  };
 
   // Item List Handlers
   const addItem = () => setItems([...items, { id: Date.now(), desc: '', category: 'Sales Unit', qty: 1, rate: 0 }]);
@@ -117,7 +137,7 @@ function App() {
       discount: pricing.discount,
       exchange: pricing.exchange,
       netPayable,
-      paid: pricing.advance,
+      paid: pricing.advance === '' ? 0 : Number(pricing.advance),
       pending: pendingDue,
       timestamp: Date.now()
     };
@@ -144,7 +164,6 @@ function App() {
       const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
       const pdfFile = new File([pdfBlob], `${record.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
 
-      // Direct WhatsApp File Attachment (Web Share API)
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           files: [pdfFile],
@@ -152,13 +171,12 @@ function App() {
           text: `Order Invoice from DREAM FOCUS PROJECTORS for ${record.custName || 'Customer'}`
         });
       } else {
-        // Fallback for Desktop: Auto-download and launch WhatsApp Web
         html2pdf().set(opt).from(element).save();
         if (record.custPhone) {
-          const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${record.invNo}\nHi ${record.custName}, your order PDF is generated and downloaded.\n*Net Payable:* ₹${record.netPayable}\n*Paid/Advance:* ₹${record.paid}\n*Pending Due:* ₹${record.pending}\nContact: +91 85085 50847`;
+          const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${record.invNo}\nHi ${record.custName || 'Customer'}, your order PDF is generated.\n*Payment Mode:* ${record.paymentMode}\n*Net Payable:* ₹${record.netPayable}\n*Paid/Advance:* ₹${record.paid}\n*Pending Due:* ₹${record.pending}\nContact: +91 85085 50847`;
           window.open(`https://wa.me/91${record.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
         } else {
-          alert('PDF Downloaded! Enter a customer phone number to launch WhatsApp directly.');
+          alert('PDF Downloaded! Enter customer phone number to launch WhatsApp.');
         }
       }
     } catch (err) {
@@ -167,11 +185,10 @@ function App() {
     }
   };
 
-  // Export Analytics to CSV
   const exportToCSV = () => {
-    let csv = "Invoice No,Date,Customer Name,Phone,Net Total,Paid,Pending Due,Status\n";
+    let csv = "Invoice No,Date,Customer Name,Phone,Payment Mode,Net Total,Paid,Pending Due,Status\n";
     history.forEach(h => {
-      csv += `"${h.invNo}","${h.date}","${h.custName}","${h.custPhone}",${h.netPayable},${h.paid},${h.pending},"${h.paymentStatus}"\n`;
+      csv += `"${h.invNo}","${h.date}","${h.custName}","${h.custPhone}","${h.paymentMode}",${h.netPayable},${h.paid},${h.pending},"${h.paymentStatus}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -215,8 +232,8 @@ function App() {
               </div>
               <div className="text-right">
                 <span className="text-amber-400 font-black text-xl tracking-wider block">ORDER INVOICE</span>
-                <span className="bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide inline-block mt-1">
-                  {billMeta.paymentStatus} CONFIRMED
+                <span className={`text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide inline-block mt-1 ${pendingDue === 0 ? 'bg-emerald-500' : 'bg-amber-500'}`}>
+                  {pendingDue === 0 ? 'PAID FULL' : billMeta.paymentStatus.toUpperCase()}
                 </span>
               </div>
             </div>
@@ -304,25 +321,47 @@ function App() {
               + Add Item / Service
             </button>
 
-            {/* Financial Summary & Warranty Terms */}
+            {/* Financial Summary, Payment Method & Warranty Terms */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start mb-6">
-              <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-1.5">
+              
+              {/* Left Box: Warranty & Mode Selectors */}
+              <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
                 <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 30-Day Testing Warranty</h4>
                 <p>• 30-day testing warranty covers lamp performance and optical engine clarity.</p>
                 <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing.</p>
                 <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
                 
-                <div className="pt-2 no-print">
-                  <label className="block font-bold text-slate-600 mb-1">Status:</label>
-                  <select className="w-full bg-white border border-slate-300 rounded p-1 text-xs" value={billMeta.paymentStatus} onChange={e => setBillMeta({...billMeta, paymentStatus: e.target.value})}>
-                    <option value="Paid">Full Paid</option>
-                    <option value="Advance">Advance Paid</option>
-                    <option value="Pending">Pending Due</option>
-                    <option value="Exchange">Exchange Unit</option>
-                  </select>
+                {/* Visible Selectors for Status & Payment Method */}
+                <div className="pt-2 border-t border-sky-200 space-y-2 no-print">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-0.5">Payment Status:</label>
+                    <select 
+                      className="w-full bg-white border border-slate-300 rounded p-1.5 text-xs font-semibold"
+                      value={billMeta.paymentStatus} 
+                      onChange={e => handleStatusChange(e.target.value)}>
+                      <option value="Advance Paid">Advance Paid (Partial Deposit)</option>
+                      <option value="Full Paid">Full Paid (Zero Balance Due)</option>
+                      <option value="Pending (Zero Advance)">Pending (Credit / Zero Advance)</option>
+                      <option value="Exchange Unit">Exchange Unit Trade-In</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-0.5">Payment Method / Mode:</label>
+                    <select 
+                      className="w-full bg-white border border-slate-300 rounded p-1.5 text-xs font-bold text-sky-900"
+                      value={billMeta.paymentMode} 
+                      onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
+                      <option value="GPay / PhonePe UPI">📱 GPay / PhonePe / UPI</option>
+                      <option value="Cash">💵 Cash</option>
+                      <option value="Bank Transfer / NEFT">🏦 Bank Transfer / NEFT</option>
+                      <option value="Debit / Credit Card">💳 Debit / Credit Card</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
+              {/* Right Box: Totals, Paid & Pending Due */}
               <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200 text-xs space-y-2 font-medium">
                 <div className="flex justify-between text-slate-600">
                   <span>Gross Order Total:</span>
@@ -330,22 +369,46 @@ function App() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">Festival Discount (₹):</span>
-                  <input type="number" className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
+                  <input type="number" className="w-28 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">Old Projector Exchange (₹):</span>
-                  <input type="number" className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
+                  <input type="number" className="w-28 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
                 </div>
+                
                 <div className="flex justify-between text-slate-900 font-bold border-t border-slate-300 pt-1.5 text-sm">
                   <span>Net Payable:</span>
                   <span>₹{netPayable.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between items-center text-sky-700 font-semibold">
-                  <span>Advance Received (₹):</span>
-                  <input type="number" className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold" value={pricing.advance} onChange={e => setPricing({...pricing, advance: e.target.value})} />
+
+                {/* Amount Received with Quick 1-Click Pay Full Button */}
+                <div className="flex justify-between items-center text-sky-700 font-semibold pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span>{billMeta.paymentStatus === 'Full Paid' ? 'Amount Paid (₹):' : 'Advance Paid (₹):'}</span>
+                    <button 
+                      type="button" 
+                      onClick={handleSetFullPayment} 
+                      className="no-print text-[10px] bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold px-1.5 py-0.5 rounded border border-sky-300">
+                      ⚡ Pay Full
+                    </button>
+                  </div>
+                  <input 
+                    type="number" 
+                    className="w-28 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold text-sm" 
+                    value={pricing.advance} 
+                    onChange={e => {
+                      const val = e.target.value === '' ? '' : Number(e.target.value);
+                      setPricing({ ...pricing, advance: val });
+                      if (val >= netPayable && netPayable > 0) {
+                        setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
+                      }
+                    }} 
+                  />
                 </div>
-                <div className="flex justify-between text-red-600 font-black border-t-2 border-red-600 pt-1.5 text-sm">
-                  <span>PENDING BALANCE DUE:</span>
+
+                {/* Pending Balance Due: Changes color dynamically */}
+                <div className={`flex justify-between font-black border-t-2 pt-1.5 text-sm ${pendingDue === 0 ? 'text-emerald-600 border-emerald-500' : 'text-red-600 border-red-600'}`}>
+                  <span>{pendingDue === 0 ? 'STATUS: PAID IN FULL' : 'PENDING BALANCE DUE:'}</span>
                   <span>₹{pendingDue.toLocaleString('en-IN')}</span>
                 </div>
               </div>
@@ -356,11 +419,11 @@ function App() {
               <div className="text-[11px] text-slate-500">
                 <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
                 <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002</p>
-                <p className="mt-1">Mode: <strong className="text-slate-700">{billMeta.paymentMode}</strong></p>
+                <p className="mt-1">Payment Method: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
               </div>
 
               <div className="flex items-center gap-6">
-                <RubberStamp status={billMeta.paymentStatus} />
+                <RubberStamp isPaid={pendingDue === 0} />
                 <DigitalSignature />
               </div>
             </div>
@@ -385,7 +448,7 @@ function App() {
                   invNo: `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`,
                   date: new Date().toISOString().slice(0, 10),
                   custName: '', custPhone: '', custAddr: '',
-                  paymentStatus: 'Advance', paymentMode: 'GPay / PhonePe UPI'
+                  paymentStatus: 'Advance Paid', paymentMode: 'GPay / PhonePe UPI'
                 });
                 setItems([{ id: Date.now(), desc: '', category: 'Sales Unit', qty: 1, rate: 0 }]);
                 setPricing({ discount: 0, exchange: 0, advance: 0 });
@@ -439,6 +502,7 @@ function App() {
                   <th className="p-2">Invoice No</th>
                   <th className="p-2">Date</th>
                   <th className="p-2">Customer</th>
+                  <th className="p-2">Mode</th>
                   <th className="p-2">Status</th>
                   <th className="p-2 text-right">Net</th>
                   <th className="p-2 text-right">Paid</th>
@@ -448,16 +512,17 @@ function App() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {history.length === 0 ? (
-                  <tr><td colSpan="8" className="p-4 text-center text-slate-400">No saved orders yet.</td></tr>
+                  <tr><td colSpan="9" className="p-4 text-center text-slate-400">No saved orders yet.</td></tr>
                 ) : (
                   history.map(item => (
                     <tr key={item.invNo} className="hover:bg-slate-50">
                       <td className="p-2 font-bold">{item.invNo}</td>
                       <td className="p-2 text-slate-500">{item.date}</td>
                       <td className="p-2 font-medium">{item.custName || 'Walk-in'}</td>
+                      <td className="p-2 font-semibold text-slate-600">{item.paymentMode || 'UPI'}</td>
                       <td className="p-2">
-                        <span className="bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded text-[10px]">
-                          {item.paymentStatus}
+                        <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${item.pending === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {item.pending === 0 ? 'PAID FULL' : item.paymentStatus}
                         </span>
                       </td>
                       <td className="p-2 text-right font-semibold">₹{item.netPayable?.toLocaleString('en-IN')}</td>
@@ -469,7 +534,7 @@ function App() {
                             setBillMeta({
                               invNo: item.invNo, date: item.date, custName: item.custName,
                               custPhone: item.custPhone, custAddr: item.custAddr,
-                              paymentStatus: item.paymentStatus, paymentMode: item.paymentMode
+                              paymentStatus: item.paymentStatus, paymentMode: item.paymentMode || 'GPay / PhonePe UPI'
                             });
                             setItems(item.items);
                             setPricing({ discount: item.discount, exchange: item.exchange, advance: item.paid });
@@ -492,7 +557,6 @@ function App() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
