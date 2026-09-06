@@ -39,7 +39,7 @@
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
 
-// --- Vector Logo, Stamp & Signature ---
+// --- Vector Logos & Stamps ---
 const ProjectorLogo = () => (
   <svg className="w-10 h-10 flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="100" height="100" rx="20" fill="#0284C7"/>
@@ -64,13 +64,59 @@ const RubberStamp = ({ isPaid }) => (
   </div>
 );
 
+// --- Handwritten Vector Signature (Exact Match to Uploaded Image) ---
 const DigitalSignature = () => (
-  <div className="text-right flex flex-col items-end">
+  <div className="text-right flex flex-col items-end" style={{ minWidth: '170px' }}>
     <span className="text-[10px] text-slate-500 font-semibold mb-0.5">Authorized Signatory</span>
-    <svg className="w-32 h-9" viewBox="0 0 200 60" fill="none">
-      <path d="M15 42 C 25 15, 35 10, 42 35 C 48 50, 52 20, 65 28 C 75 35, 80 22, 92 32 C 100 38, 110 18, 125 35 C 135 45, 140 15, 155 30 C 165 40, 175 25, 185 32" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M10 48 Q 90 52 190 44" stroke="#0f172a" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
+    <div style={{ width: '160px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        viewBox="0 0 180 60" 
+        width="160" 
+        height="52" 
+        style={{ display: 'block', overflow: 'visible' }}
+      >
+        {/* Initial 'M' stroke */}
+        <path 
+          d="M 22,42 L 30,22 L 34,35 L 40,23 L 42,40 C 44,46 54,47 62,39" 
+          stroke="#0f172a" 
+          strokeWidth="2.2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          fill="none" 
+        />
+        {/* Tall vertical ascender loop with sharp downstroke */}
+        <path 
+          d="M 62,39 L 75,10 L 67,46 C 68,36 72,22 76,17 L 71,44" 
+          stroke="#0f172a" 
+          strokeWidth="2.2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          fill="none" 
+        />
+        {/* Wavy cursive baseline flowing into long rightward arrow sweep */}
+        <path 
+          d="M 71,36 Q 76,31 80,33 Q 85,30 89,33 L 95,31 Q 104,30 148,27 L 165,25 L 152,33" 
+          stroke="#0f172a" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          fill="none" 
+        />
+        {/* Underline accent */}
+        <path 
+          d="M 72,38 L 105,36" 
+          stroke="#0f172a" 
+          strokeWidth="1.8" 
+          strokeLinecap="round" 
+          fill="none" 
+        />
+        {/* Three distinct signature dots */}
+        <circle cx="118" cy="35" r="1.6" fill="#0f172a" />
+        <circle cx="129" cy="34.5" r="1.6" fill="#0f172a" />
+        <circle cx="140" cy="34" r="1.6" fill="#0f172a" />
+      </svg>
+    </div>
     <div className="text-[11px] font-bold text-slate-900 border-t border-slate-900 pt-0.5 w-40 text-center">
       M. KANAGAVEL (Proprietor)
     </div>
@@ -137,14 +183,14 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_FIXED_BILLS_V9');
+    const saved = localStorage.getItem('DFP_CHARTS_BILLS_V10');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
   const [analyticsYear, setAnalyticsYear] = useState('2026');
 
   useEffect(() => {
-    localStorage.setItem('DFP_FIXED_BILLS_V9', JSON.stringify(history));
+    localStorage.setItem('DFP_CHARTS_BILLS_V10', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -253,7 +299,6 @@ function App() {
     return record;
   };
 
-  // Construct Detailed WhatsApp Message Text
   const buildWhatsAppText = (record) => {
     return `*DREAM FOCUS PROJECTORS - TAX INVOICE*\n` +
       `*Invoice No:* ${record.invNo}\n` +
@@ -273,10 +318,9 @@ function App() {
       `*Testing Warranty:* 3 Days\n` +
       `Shop Contact: +91 85085 50847\n` +
       `No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002\n\n` +
-      `_Attached: Verified GST Tax Bill (PDF)._`;
+      `_Thank you for choosing DREAM FOCUS PROJECTORS! Attached is your verified bill._`;
   };
 
-  // Direct Customer WhatsApp Chat (Instant 1-Click to Customer Number)
   const openDirectCustomerWhatsApp = () => {
     const record = saveCurrentOrder();
     const cleanPhone = (billMeta.custPhone || '').replace(/\D/g, '').slice(-10);
@@ -288,14 +332,13 @@ function App() {
     window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  // --- GUARANTEED NON-BLANK PDF GENERATOR & WHATSAPP SHARE ---
+  // Reliable PDF Generator & Share
   const sharePDFDirectly = async () => {
     const record = saveCurrentOrder();
     const cleanPhone = (billMeta.custPhone || '').replace(/\D/g, '').slice(-10);
     const invoiceElem = document.getElementById('printable-invoice');
     if (!invoiceElem) return;
 
-    // Fix: Prevent empty white paper by ensuring the element is visible to html2canvas
     const wasHidden = invoiceElem.classList.contains('hidden');
     if (wasHidden) {
       invoiceElem.classList.remove('hidden');
@@ -319,7 +362,6 @@ function App() {
     try {
       const pdfBlob = await html2pdf().set(opt).from(invoiceElem).output('blob');
       
-      // Restore previous styling
       if (wasHidden) {
         invoiceElem.classList.add('hidden');
         invoiceElem.style.display = '';
@@ -334,7 +376,6 @@ function App() {
       const pdfFile = new File([pdfBlob], `${record.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
       const waMessage = buildWhatsAppText(record);
 
-      // Web Share API (Direct file attach on Mobile Chrome / Safari)
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           files: [pdfFile],
@@ -342,7 +383,6 @@ function App() {
           text: waMessage
         });
       } else {
-        // Desktop / Non-WebShare Fallback: Download the PDF and launch customer's chat
         const url = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -353,7 +393,7 @@ function App() {
         if (cleanPhone && cleanPhone.length === 10) {
           window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
         } else {
-          alert('PDF downloaded! Enter customer phone number to launch direct WhatsApp chat.');
+          alert('PDF downloaded! Enter customer phone number to open direct WhatsApp chat.');
         }
       }
     } catch (err) {
@@ -391,7 +431,6 @@ function App() {
             text: waText
           });
         } else {
-          // Download and open customer chat
           const url = URL.createObjectURL(pdfBlob);
           const a = document.createElement('a');
           a.href = url;
@@ -764,7 +803,7 @@ function App() {
               {/* Action Buttons on Mobile */}
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1 shadow">
-                  💬 Direct WhatsApp Chat
+                  💬 Direct Customer Chat
                 </button>
                 <button onClick={() => setShowPreviewModal(true)} className="bg-slate-200 text-slate-800 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1">
                   👁️ Preview A4 Bill
@@ -783,7 +822,7 @@ function App() {
             </div>
           )}
 
-          {/* LAPTOP / PRINTABLE A4 CANVAS (Targeted by html2pdf) */}
+          {/* LAPTOP / PRINTABLE A4 CANVAS */}
           <div 
             ref={invoiceRef} 
             id="printable-invoice"
@@ -893,7 +932,7 @@ function App() {
               + Add Item / Service
             </button>
 
-            <div className="grid grid-cols-2 gap-6 items-start mb-6">
+            <div className="grid grid-cols-2 gap-6 items-start mb-4">
               <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
                 <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
                 <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
@@ -998,11 +1037,22 @@ function App() {
               </div>
             </div>
 
-            <div className="flex justify-between items-end border-t border-slate-300 pt-4">
+            {/* Added Customer Thank-You Note Section */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center mb-4">
+              <div className="text-xs font-bold text-slate-800">
+                ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_5](start_span)[span_5](end_span)!
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                We appreciate your business & trust. For queries, replacement lamps, or service bookings, contact: <strong>+91 85085 50847</strong>[span_6](start_span)[span_6](end_span)
+              </div>
+            </div>
+
+            {/* Footer with Stamp & Signature */}
+            <div className="flex justify-between items-end border-t border-slate-300 pt-3">
               <div className="text-[11px] text-slate-500">
-                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_5](start_span)[span_5](end_span)</p>
-                <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_6](start_span)[span_6](end_span)</p>
-                <p className="mt-1">Payment Method: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
+                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_7](start_span)[span_7](end_span)</p>
+                <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_8](start_span)[span_8](end_span)</p>
+                <p className="mt-0.5">Payment Method: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
               </div>
 
               <div className="flex items-center gap-6">
@@ -1167,7 +1217,7 @@ function App() {
                     <button 
                       onClick={() => {
                         const cleanPhone = (c.custPhone || '').replace(/\D/g, '').slice(-10);
-                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you[span_7](start_span)[span_7](end_span)!`;
+                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you[span_9](start_span)[span_9](end_span)!`;
                         window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
                       }}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] flex items-center gap-1">
@@ -1248,7 +1298,7 @@ function App() {
         </div>
       )}
 
-      {/* CUSTOMER INVOICE PDF VIEW MODAL (FROM AUDIT TABLE) */}
+      {/* CUSTOMER INVOICE PDF VIEW MODAL */}
       {auditPreviewInvoice && (
         <div className="fixed inset-0 bg-slate-900/75 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto no-print">
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl p-4 sm:p-6 my-auto max-h-[95vh] overflow-y-auto">
@@ -1273,7 +1323,7 @@ function App() {
                   <div>
                     <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
                     <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
-                    <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_8](start_span)[span_8](end_span)</p>
+                    <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_10](start_span)[span_10](end_span)</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1290,7 +1340,7 @@ function App() {
                   <div className="space-y-1">
                     <div><span className="text-slate-500 font-semibold">Name:</span> <strong className="text-slate-900">{auditPreviewInvoice.custName || 'Walk-in'}</strong></div>
                     <div><span className="text-slate-500 font-semibold">WhatsApp:</span> {auditPreviewInvoice.custPhone || 'N/A'}</div>
-                    <div><span className="text-slate-500 font-semibold">Address:</span> {auditPreviewInvoice.custAddr || 'Madurai'}[span_9](start_span)[span_9](end_span)</div>
+                    <div><span className="text-slate-500 font-semibold">Address:</span> {auditPreviewInvoice.custAddr || 'Madurai'}[span_11](start_span)[span_11](end_span)</div>
                     {auditPreviewInvoice.custGstin && <div><span className="text-slate-500 font-semibold">Buyer GSTIN:</span> {auditPreviewInvoice.custGstin}</div>}
                   </div>
                 </div>
@@ -1299,8 +1349,8 @@ function App() {
                   <div className="space-y-1">
                     <div><span className="text-slate-500 font-semibold">Invoice No:</span> <strong className="text-slate-900">{auditPreviewInvoice.invNo}</strong></div>
                     <div><span className="text-slate-500 font-semibold">Date:</span> {auditPreviewInvoice.date}</div>
-                    <div><span className="text-slate-500 font-semibold">Proprietor:</span> M. KANAGAVEL[span_10](start_span)[span_10](end_span)</div>
-                    <div><span className="text-slate-500 font-semibold">Place of Supply:</span> Tamil Nadu (33)[span_11](start_span)[span_11](end_span)</div>
+                    <div><span className="text-slate-500 font-semibold">Proprietor:</span> M. KANAGAVEL[span_12](start_span)[span_12](end_span)</div>
+                    <div><span className="text-slate-500 font-semibold">Place of Supply:</span> Tamil Nadu (33)[span_13](start_span)[span_13](end_span)</div>
                   </div>
                 </div>
               </div>
@@ -1330,11 +1380,11 @@ function App() {
                 </tbody>
               </table>
 
-              <div className="grid grid-cols-2 gap-6 items-start mb-6">
+              <div className="grid grid-cols-2 gap-6 items-start mb-4">
                 <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
                   <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
                   <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
-                  <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing[span_12](start_span)[span_12](end_span).</p>
+                  <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing[span_14](start_span)[span_14](end_span).</p>
                   <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
                   <div className="pt-2 text-slate-600 font-semibold border-t border-sky-200">
                     Payment Method: <strong className="text-slate-900">{auditPreviewInvoice.paymentMode}</strong>
@@ -1367,10 +1417,20 @@ function App() {
                 </div>
               </div>
 
-              <div className="flex justify-between items-end border-t border-slate-300 pt-4">
+              {/* Thank-You Section inside Modal */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center mb-4">
+                <div className="text-xs font-bold text-slate-800">
+                  ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_15](start_span)[span_15](end_span)!
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">
+                  We appreciate your business & trust. For queries, replacement lamps, or service bookings, contact: <strong>+91 85085 50847</strong>[span_16](start_span)[span_16](end_span)
+                </div>
+              </div>
+
+              <div className="flex justify-between items-end border-t border-slate-300 pt-3">
                 <div className="text-[11px] text-slate-500">
-                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_13](start_span)[span_13](end_span)</p>
-                  <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_14](start_span)[span_14](end_span)</p>
+                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_17](start_span)[span_17](end_span)</p>
+                  <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_18](start_span)[span_18](end_span)</p>
                 </div>
                 <div className="flex items-center gap-6">
                   <RubberStamp isPaid={(Number(auditPreviewInvoice.pending) || 0) === 0} />
