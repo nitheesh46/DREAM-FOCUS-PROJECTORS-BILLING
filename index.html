@@ -12,7 +12,7 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Chart.js for Visual Graphs & Pie Charts -->
+  <!-- Chart.js for Graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- HTML2PDF Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -22,7 +22,7 @@
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; padding: 0 !important; margin: 0 !important; }
-      #printable-invoice, #modal-printable-invoice { 
+      #printable-invoice, #audit-modal-printable { 
         box-shadow: none !important; 
         border: none !important; 
         width: 100% !important; 
@@ -32,14 +32,14 @@
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen pb-24 md:pb-12">
+<body class="bg-slate-100 text-slate-900 min-h-screen pb-28 md:pb-12">
 
 <div id="root"></div>
 
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
 
-// --- Vector Logos & Stamps ---
+// --- Vector Logo, Stamp & Signature ---
 const ProjectorLogo = () => (
   <svg className="w-10 h-10 flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="100" height="100" rx="20" fill="#0284C7"/>
@@ -93,18 +93,6 @@ const DEFAULT_RECORDS = [
       { id: 2, desc: "Optical Prism Alignment & Deep Clean", category: "Service", qty: 1, rate: 1800 }
     ],
     grossTotal: 25800, discount: 800, exchange: 2000, taxableAmount: 23000, gstRate: 18, cgst: 2070, sgst: 2070, totalTax: 4140, netPayable: 27140, paid: 15000, pending: 12140
-  },
-  {
-    invNo: "DFP/2026/1082", date: "2026-08-05", custName: "Rajesh Kannan", custPhone: "9842100003", custAddr: "Anna Nagar, Madurai",
-    paymentStatus: "Full Paid", paymentMode: "Cash",
-    items: [{ id: 1, desc: "Chip-Level Ballast Board Repair", category: "Service", qty: 1, rate: 3500 }],
-    grossTotal: 3500, discount: 0, exchange: 0, taxableAmount: 3500, gstRate: 18, cgst: 315, sgst: 315, totalTax: 630, netPayable: 4130, paid: 4130, pending: 0
-  },
-  {
-    invNo: "DFP/2026/1104", date: "2026-08-22", custName: "Meenakshi High School", custPhone: "9842100004", custAddr: "Simmakkal, Madurai",
-    paymentStatus: "Advance Paid", paymentMode: "GPay / PhonePe UPI",
-    items: [{ id: 1, desc: "Panasonic Classroom Projector Setup", category: "Sales Unit", qty: 2, rate: 9500 }],
-    grossTotal: 19000, discount: 1000, exchange: 1500, taxableAmount: 16500, gstRate: 18, cgst: 1485, sgst: 1485, totalTax: 2970, netPayable: 19470, paid: 10000, pending: 9470
   }
 ];
 
@@ -112,9 +100,8 @@ function App() {
   const [tab, setTab] = useState('create');
   const [deviceMode, setDeviceMode] = useState(() => window.innerWidth < 768 ? 'mobile' : 'laptop');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null); // Direct Customer PDF Modal from Audit Table
+  const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null);
   const invoiceRef = useRef(null);
-  const auditModalRef = useRef(null);
 
   // Chart Canvas & Instance Refs
   const barChartRef = useRef(null);
@@ -150,14 +137,14 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_CHARTS_BILLS_V8');
+    const saved = localStorage.getItem('DFP_FIXED_BILLS_V9');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
   const [analyticsYear, setAnalyticsYear] = useState('2026');
 
   useEffect(() => {
-    localStorage.setItem('DFP_CHARTS_BILLS_V8', JSON.stringify(history));
+    localStorage.setItem('DFP_FIXED_BILLS_V9', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -175,7 +162,7 @@ function App() {
     localStorage.setItem('DFP_USER_MODE_PREF', mode);
   };
 
-  // Live Bill Calculations
+  // Calculations
   const grossTotal = useMemo(() => items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.rate) || 0), 0), [items]);
   const taxableAmount = useMemo(() => Math.max(0, grossTotal - (Number(pricing.discount) || 0) - (Number(pricing.exchange) || 0)), [grossTotal, pricing.discount, pricing.exchange]);
   
@@ -196,7 +183,7 @@ function App() {
     return Math.max(0, gstBreakdown.netPayable - paidVal);
   }, [gstBreakdown.netPayable, pricing.advance]);
 
-  // Status & Payment Sync
+  // Payment Status Handlers
   const handleStatusChange = (status) => {
     setBillMeta(prev => ({ ...prev, paymentStatus: status }));
     if (status === 'Full Paid') {
@@ -237,12 +224,11 @@ function App() {
     }
   };
 
-  // Item List Handlers
   const addItem = () => setItems([...items, { id: Date.now(), desc: '', category: 'Sales Unit', qty: 1, rate: 0 }]);
   const removeItem = (id) => setItems(items.filter(i => i.id !== id));
   const updateItem = (id, field, val) => setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
 
-  // Save Order to History
+  // Save Order Record
   const saveCurrentOrder = () => {
     const record = {
       ...billMeta,
@@ -267,57 +253,133 @@ function App() {
     return record;
   };
 
-  // PDF Engine & WhatsApp Share
+  // Construct Detailed WhatsApp Message Text
+  const buildWhatsAppText = (record) => {
+    return `*DREAM FOCUS PROJECTORS - TAX INVOICE*\n` +
+      `*Invoice No:* ${record.invNo}\n` +
+      `*Customer:* ${record.custName || 'Valued Customer'}\n` +
+      `*Date:* ${record.date}\n` +
+      `--------------------------\n` +
+      `*Gross Total:* ₹${record.grossTotal.toLocaleString('en-IN')}\n` +
+      (record.discount > 0 ? `*Discount:* -₹${record.discount.toLocaleString('en-IN')}\n` : '') +
+      (record.exchange > 0 ? `*Exchange Old Unit:* -₹${record.exchange.toLocaleString('en-IN')}\n` : '') +
+      `*Taxable Value:* ₹${record.taxableAmount.toLocaleString('en-IN')}\n` +
+      `*GST (${record.gstRate}%):* ₹${record.totalTax.toLocaleString('en-IN')}\n` +
+      `*Net Grand Total:* ₹${record.netPayable.toLocaleString('en-IN')}\n` +
+      `*Amount Paid:* ₹${record.paid.toLocaleString('en-IN')}\n` +
+      `*Pending Balance Due:* ₹${record.pending.toLocaleString('en-IN')}\n` +
+      `--------------------------\n` +
+      `*Payment Mode:* ${record.paymentMode}\n` +
+      `*Testing Warranty:* 3 Days\n` +
+      `Shop Contact: +91 85085 50847\n` +
+      `No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002\n\n` +
+      `_Attached: Verified GST Tax Bill (PDF)._`;
+  };
+
+  // Direct Customer WhatsApp Chat (Instant 1-Click to Customer Number)
+  const openDirectCustomerWhatsApp = () => {
+    const record = saveCurrentOrder();
+    const cleanPhone = (billMeta.custPhone || '').replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      alert("Please enter a valid 10-digit WhatsApp phone number for the customer!");
+      return;
+    }
+    const text = buildWhatsAppText(record);
+    window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  // --- GUARANTEED NON-BLANK PDF GENERATOR & WHATSAPP SHARE ---
   const sharePDFDirectly = async () => {
     const record = saveCurrentOrder();
+    const cleanPhone = (billMeta.custPhone || '').replace(/\D/g, '').slice(-10);
+    const invoiceElem = document.getElementById('printable-invoice');
+    if (!invoiceElem) return;
+
+    // Fix: Prevent empty white paper by ensuring the element is visible to html2canvas
+    const wasHidden = invoiceElem.classList.contains('hidden');
+    if (wasHidden) {
+      invoiceElem.classList.remove('hidden');
+      invoiceElem.style.display = 'block';
+      invoiceElem.style.position = 'fixed';
+      invoiceElem.style.top = '0';
+      invoiceElem.style.left = '0';
+      invoiceElem.style.width = '800px';
+      invoiceElem.style.zIndex = '99999';
+      invoiceElem.style.backgroundColor = '#ffffff';
+    }
+
     const opt = {
-      margin: 5,
+      margin: [4, 4, 4, 4],
       filename: `${billMeta.invNo.replace(/\//g, '_')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     try {
-      const element = invoiceRef.current;
-      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-      const pdfFile = new File([pdfBlob], `${record.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
+      const pdfBlob = await html2pdf().set(opt).from(invoiceElem).output('blob');
+      
+      // Restore previous styling
+      if (wasHidden) {
+        invoiceElem.classList.add('hidden');
+        invoiceElem.style.display = '';
+        invoiceElem.style.position = '';
+        invoiceElem.style.top = '';
+        invoiceElem.style.left = '';
+        invoiceElem.style.width = '';
+        invoiceElem.style.zIndex = '';
+        invoiceElem.style.backgroundColor = '';
+      }
 
+      const pdfFile = new File([pdfBlob], `${record.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
+      const waMessage = buildWhatsAppText(record);
+
+      // Web Share API (Direct file attach on Mobile Chrome / Safari)
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           files: [pdfFile],
-          title: `Invoice ${record.invNo}`,
-          text: `Invoice from DREAM FOCUS PROJECTORS for ${record.custName || 'Customer'}`
+          title: `Tax Invoice ${record.invNo}`,
+          text: waMessage
         });
       } else {
-        html2pdf().set(opt).from(element).save();
-        if (record.custPhone) {
-          const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${record.invNo}\nHi ${record.custName || 'Customer'},\nTaxable: ₹${record.taxableAmount}\nGST (${record.gstRate}%): ₹${record.totalTax}\n*Total Bill:* ₹${record.netPayable}\n*Paid:* ₹${record.paid}\n*Pending Due:* ₹${record.pending}\nContact: +91 85085 50847`;
-          window.open(`https://wa.me/91${record.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+        // Desktop / Non-WebShare Fallback: Download the PDF and launch customer's chat
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${record.invNo.replace(/\//g, '_')}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        if (cleanPhone && cleanPhone.length === 10) {
+          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
         } else {
-          alert('PDF Downloaded! Enter phone number to open WhatsApp.');
+          alert('PDF downloaded! Enter customer phone number to launch direct WhatsApp chat.');
         }
       }
     } catch (err) {
       console.error(err);
+      if (wasHidden) invoiceElem.classList.add('hidden');
       window.print();
     }
   };
 
-  // Direct PDF Download / WhatsApp Share for Past Audit Invoice Modal
+  // Audit Modal PDF & WhatsApp Sharing
   const printOrShareAuditInvoice = async (inv, isWhatsApp = false) => {
     const element = document.getElementById('audit-modal-printable');
     if (!element) return;
 
     const opt = {
-      margin: 5,
+      margin: [4, 4, 4, 4],
       filename: `${inv.invNo.replace(/\//g, '_')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     try {
+      const cleanPhone = (inv.custPhone || '').replace(/\D/g, '').slice(-10);
+      const waText = buildWhatsAppText(inv);
+
       if (isWhatsApp) {
         const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
         const pdfFile = new File([pdfBlob], `${inv.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
@@ -326,13 +388,19 @@ function App() {
           await navigator.share({
             files: [pdfFile],
             title: `Invoice ${inv.invNo}`,
-            text: `Invoice from DREAM FOCUS PROJECTORS for ${inv.custName || 'Customer'}`
+            text: waText
           });
         } else {
-          html2pdf().set(opt).from(element).save();
-          if (inv.custPhone) {
-            const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${inv.invNo}\nHi ${inv.custName || 'Customer'},\n*Total Bill:* ₹${inv.netPayable}\n*Paid:* ₹${inv.paid}\n*Pending Due:* ₹${inv.pending}\nContact: +91 85085 50847`;
-            window.open(`https://wa.me/91${inv.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+          // Download and open customer chat
+          const url = URL.createObjectURL(pdfBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${inv.invNo.replace(/\//g, '_')}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          if (cleanPhone && cleanPhone.length === 10) {
+            window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waText)}`, '_blank');
           }
         }
       } else {
@@ -386,24 +454,19 @@ function App() {
         return (analyticsYear === 'ALL' || y === analyticsYear) && rowM === m;
       });
 
-      const sales = records.reduce((s, r) => s + (r.netPayable || 0), 0);
-      const gst = records.reduce((s, r) => s + (r.totalTax || 0), 0);
-      const collected = records.reduce((s, r) => s + (Number(r.paid) || 0), 0);
-      const pending = records.reduce((s, r) => s + (Number(r.pending) || 0), 0);
-
       return {
         code: m,
         name: monthLabels[i],
         orders: records.length,
-        sales,
-        gst,
-        collected,
-        pending
+        sales: records.reduce((s, r) => s + (r.netPayable || 0), 0),
+        gst: records.reduce((s, r) => s + (r.totalTax || 0), 0),
+        collected: records.reduce((s, r) => s + (Number(r.paid) || 0), 0),
+        pending: records.reduce((s, r) => s + (Number(r.pending) || 0), 0)
       };
     });
   }, [history, analyticsYear]);
 
-  // Chart.js Graphs Integration
+  // Chart.js Graphs
   useEffect(() => {
     if (tab !== 'reports') return;
 
@@ -411,7 +474,6 @@ function App() {
     if (pieChartInst.current) pieChartInst.current.destroy();
     if (modeChartInst.current) modeChartInst.current.destroy();
 
-    // 1. Monthly Performance Bar Chart
     if (barChartRef.current) {
       const ctx = barChartRef.current.getContext('2d');
       barChartInst.current = new Chart(ctx, {
@@ -421,49 +483,39 @@ function App() {
           datasets: [
             { label: 'Gross Sales (₹)', data: monthlyMatrix.map(m => m.sales), backgroundColor: '#0284c7', borderRadius: 4 },
             { label: 'Cash/UPI Collected (₹)', data: monthlyMatrix.map(m => m.collected), backgroundColor: '#16a34a', borderRadius: 4 },
-            { label: 'Pending Balance Due (₹)', data: monthlyMatrix.map(m => m.pending), backgroundColor: '#dc2626', borderRadius: 4 }
+            { label: 'Pending Due (₹)', data: monthlyMatrix.map(m => m.pending), backgroundColor: '#dc2626', borderRadius: 4 }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } },
-            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ₹${Number(c.raw).toLocaleString('en-IN')}` } }
-          },
-          scales: {
-            y: { beginAtZero: true, ticks: { callback: (val) => '₹' + Number(val).toLocaleString('en-IN') } }
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } }
           }
         }
       });
     }
 
-    // 2. Paid vs Pending Doughnut Chart
     if (pieChartRef.current) {
       const ctx = pieChartRef.current.getContext('2d');
       pieChartInst.current = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['Paid / Advance Realized', 'Outstanding Pending Due'],
+          labels: ['Paid Realized', 'Pending Due'],
           datasets: [{
             data: [kpis.collected, kpis.pending],
             backgroundColor: ['#16a34a', '#dc2626'],
-            borderWidth: 2,
-            hoverOffset: 4
+            borderWidth: 2
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } },
-            tooltip: { callbacks: { label: (c) => `₹${Number(c.raw).toLocaleString('en-IN')}` } }
-          }
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } } }
         }
       });
     }
 
-    // 3. Payment Mode Donut Chart
     if (modeChartRef.current) {
       const ctx = modeChartRef.current.getContext('2d');
       const modesMap = {};
@@ -472,15 +524,12 @@ function App() {
         modesMap[mode] = (modesMap[mode] || 0) + (Number(h.paid) || 0);
       });
 
-      const labels = Object.keys(modesMap);
-      const values = Object.values(modesMap);
-
       modeChartInst.current = new Chart(ctx, {
         type: 'pie',
         data: {
-          labels: labels.length ? labels : ['No Data'],
+          labels: Object.keys(modesMap).length ? Object.keys(modesMap) : ['No Data'],
           datasets: [{
-            data: values.length ? values : [1],
+            data: Object.values(modesMap).length ? Object.values(modesMap) : [1],
             backgroundColor: ['#0284c7', '#10b981', '#f59e0b', '#8b5cf6', '#64748b'],
             borderWidth: 2
           }]
@@ -488,10 +537,7 @@ function App() {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } },
-            tooltip: { callbacks: { label: (c) => `₹${Number(c.raw).toLocaleString('en-IN')}` } }
-          }
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } } }
         }
       });
     }
@@ -503,7 +549,6 @@ function App() {
     };
   }, [tab, monthlyMatrix, kpis, filteredHistory]);
 
-  // Export CSV
   const exportToCSV = () => {
     let csv = "Invoice No,Date,Customer Name,Phone,Mode,Taxable Val,GST Rate,Total GST,Net Payable,Paid,Pending Due,Status\n";
     filteredHistory.forEach(h => {
@@ -527,7 +572,7 @@ function App() {
             <ProjectorLogo />
             <div>
               <div className="font-extrabold text-sm text-slate-800 leading-tight">DREAM FOCUS</div>
-              <div className="text-[10px] text-slate-500 font-semibold">Madurai Projector Billing & Accounts</div>
+              <div className="text-[10px] text-slate-500 font-semibold">Madurai Projector Billing & Accounts[span_0](start_span)[span_0](end_span)</div>
             </div>
           </div>
 
@@ -562,7 +607,7 @@ function App() {
 
       {tab === 'create' ? (
         <div>
-          {/* MOBILE CARD FORM */}
+          {/* MOBILE TOUCH FORM */}
           {deviceMode === 'mobile' && (
             <div className="no-print space-y-3">
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
@@ -576,8 +621,8 @@ function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600">WhatsApp Mobile</label>
-                    <input type="tel" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm font-semibold mt-0.5 outline-none focus:border-sky-600" placeholder="10 digits" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
+                    <label className="text-[11px] font-bold text-slate-600">WhatsApp Mobile *</label>
+                    <input type="tel" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm font-semibold mt-0.5 outline-none focus:border-sky-600" placeholder="10-digit number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-slate-600">Delivery Area</label>
@@ -586,7 +631,7 @@ function App() {
                 </div>
               </div>
 
-              {/* Items Card List for Mobile */}
+              {/* Items Card List */}
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                 <div className="flex justify-between items-center border-b pb-2">
                   <span className="font-bold text-xs text-sky-700 uppercase tracking-wide">📦 Projector Items & Services</span>
@@ -633,7 +678,7 @@ function App() {
                 ))}
               </div>
 
-              {/* Pricing, GST & Payment for Mobile */}
+              {/* Pricing, GST & Payment */}
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2.5 text-xs">
                 <span className="font-bold text-xs text-sky-700 uppercase tracking-wide block border-b pb-1.5">💰 Payment & GST Details</span>
                 <div className="flex justify-between items-center py-1">
@@ -667,7 +712,7 @@ function App() {
                   <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
                 </div>
 
-                {/* Amount Paid with ⚡ Full Pay & ⏳ Advance Toggles */}
+                {/* Amount Paid with Full Pay & Advance Toggles */}
                 <div className="py-2 border-t border-slate-200">
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="font-bold text-slate-700">Payment Type:</span>
@@ -716,28 +761,29 @@ function App() {
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <button onClick={() => setShowPreviewModal(true)} className="flex-1 bg-slate-200 text-slate-800 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1.5">
-                  👁️ Preview Print Bill
+              {/* Action Buttons on Mobile */}
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1 shadow">
+                  💬 Direct WhatsApp Chat
                 </button>
-                <button onClick={resetForm} className="bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-lg text-xs">
-                  🔄 Reset
+                <button onClick={() => setShowPreviewModal(true)} className="bg-slate-200 text-slate-800 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1">
+                  👁️ Preview A4 Bill
                 </button>
               </div>
 
-              {/* Mobile Fixed Bottom Action Bar */}
+              {/* Mobile Sticky Bottom Bar */}
               <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2.5 flex gap-2 z-40 shadow-lg">
-                <button onClick={sharePDFDirectly} className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow">
+                <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 text-white font-bold py-3 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow">
                   📄 Share PDF to WhatsApp
                 </button>
-                <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-sky-600 text-white font-bold px-5 py-3 rounded-lg text-xs shadow">
+                <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 text-white font-bold px-5 py-3 rounded-lg text-xs shadow">
                   🖨️ Print
                 </button>
               </div>
             </div>
           )}
 
-          {/* LAPTOP / PRINTABLE A4 CANVAS */}
+          {/* LAPTOP / PRINTABLE A4 CANVAS (Targeted by html2pdf) */}
           <div 
             ref={invoiceRef} 
             id="printable-invoice"
@@ -749,7 +795,7 @@ function App() {
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
                   <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
-                  <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847</p>
+                  <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_1](start_span)[span_1](end_span)</p>
                 </div>
               </div>
               <div className="text-right">
@@ -789,10 +835,10 @@ function App() {
                     <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
                   </div>
                   <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Proprietor:</span>
-                    <span className="font-semibold text-slate-800">M. KANAGAVEL</span>
+                    <span className="font-semibold text-slate-800">M. KANAGAVEL[span_2](start_span)[span_2](end_span)</span>
                   </div>
                   <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Place of Supply:</span>
-                    <span className="font-semibold text-slate-800">Tamil Nadu (33)</span>
+                    <span className="font-semibold text-slate-800">Tamil Nadu (33)[span_3](start_span)[span_3](end_span)</span>
                   </div>
                 </div>
               </div>
@@ -848,11 +894,10 @@ function App() {
             </button>
 
             <div className="grid grid-cols-2 gap-6 items-start mb-6">
-              {/* 3-Day Warranty Terms */}
               <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
                 <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
                 <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
-                <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing.</p>
+                <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing[span_4](start_span)[span_4](end_span).</p>
                 <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
                 
                 <div className="pt-2 border-t border-sky-200 space-y-2 no-print">
@@ -921,7 +966,7 @@ function App() {
                   <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
                 </div>
                 
-                {/* Amount Paid with ⚡ Full Pay & ⏳ Advance Toggles */}
+                {/* Amount Paid with Full Pay & Advance Buttons */}
                 <div className="flex justify-between items-center text-sky-700 font-semibold pt-1">
                   <div className="flex items-center gap-1.5">
                     <span>Amount Paid (₹):</span>
@@ -955,8 +1000,8 @@ function App() {
 
             <div className="flex justify-between items-end border-t border-slate-300 pt-4">
               <div className="text-[11px] text-slate-500">
-                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
-                <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002</p>
+                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_5](start_span)[span_5](end_span)</p>
+                <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_6](start_span)[span_6](end_span)</p>
                 <p className="mt-1">Payment Method: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
               </div>
 
@@ -977,10 +1022,13 @@ function App() {
 
           {deviceMode === 'laptop' && (
             <div className="mt-5 flex flex-wrap gap-3 no-print">
-              <button onClick={sharePDFDirectly} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
+              <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow transition flex items-center justify-center gap-1.5">
+                💬 Direct Customer WhatsApp
+              </button>
+              <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
                 📄 Share GST PDF Bill to WhatsApp
               </button>
-              <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-5 rounded-lg shadow transition">
+              <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-5 rounded-lg shadow transition">
                 💾 Save & Print
               </button>
               <button onClick={resetForm} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-lg transition">
@@ -990,9 +1038,7 @@ function App() {
           )}
         </div>
       ) : (
-        /* ========================================================================= */
-        /* REPORTS SECTION: VISUAL GRAPHS & AUDIT LEDGER WITH CUSTOMER PDF VIEW */
-        /* ========================================================================= */
+        /* REPORTS & AUDIT SECTION */
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap justify-between items-center gap-3">
             <div>
@@ -1120,8 +1166,9 @@ function App() {
                     </div>
                     <button 
                       onClick={() => {
-                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you!`;
-                        window.open(`https://wa.me/91${c.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                        const cleanPhone = (c.custPhone || '').replace(/\D/g, '').slice(-10);
+                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you[span_7](start_span)[span_7](end_span)!`;
+                        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
                       }}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] flex items-center gap-1">
                       💬 WhatsApp Reminder
@@ -1132,13 +1179,11 @@ function App() {
             )}
           </div>
 
-          {/* ========================================================================= */}
-          {/* COMPLETE INVOICE AUDIT LEDGER - WITH DIRECT CUSTOMER PDF VIEW BUTTON */}
-          {/* ========================================================================= */}
+          {/* AUDIT LEDGER WITH DIRECT PDF VIEW */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-bold text-slate-900 text-xs sm:text-sm">📋 Complete Invoice Audit Ledger</h3>
-              <span className="text-[11px] text-slate-500 font-medium">Click <strong>👁️ PDF View</strong> to inspect & download any customer bill</span>
+              <span className="text-[11px] text-slate-500 font-medium">Click <strong>👁️ PDF View</strong> to open full tax bill</span>
             </div>
             
             <div className="overflow-x-auto">
@@ -1170,13 +1215,11 @@ function App() {
                       <td className="p-2 text-right text-emerald-700 font-semibold">₹{(Number(item.paid) || 0).toLocaleString('en-IN')}</td>
                       <td className="p-2 text-right text-red-600 font-black">₹{(Number(item.pending) || 0).toLocaleString('en-IN')}</td>
                       <td className="p-2 text-center no-print whitespace-nowrap">
-                        {/* Direct Customer PDF View Button */}
                         <button 
                           onClick={() => setAuditPreviewInvoice(item)}
                           className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-2 py-1 rounded text-[11px] shadow-sm mr-1.5 transition inline-flex items-center gap-1">
                           👁️ PDF View
                         </button>
-                        {/* Edit in Main Screen */}
                         <button 
                           onClick={() => {
                             setBillMeta({
@@ -1191,7 +1234,6 @@ function App() {
                           className="text-slate-600 hover:text-slate-900 font-bold px-1.5 py-1 text-[11px] mr-1">
                           ✏️ Edit
                         </button>
-                        {/* Delete */}
                         <button onClick={() => setHistory(history.filter(h => h.invNo !== item.invNo))} className="text-red-500 hover:text-red-700 font-bold px-1 py-1 text-[11px]">
                           ✕
                         </button>
@@ -1206,18 +1248,15 @@ function App() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* DIRECT CUSTOMER INVOICE PDF VIEW MODAL (FROM AUDIT LEDGER) */}
-      {/* ========================================================================= */}
+      {/* CUSTOMER INVOICE PDF VIEW MODAL (FROM AUDIT TABLE) */}
       {auditPreviewInvoice && (
         <div className="fixed inset-0 bg-slate-900/75 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto no-print">
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl p-4 sm:p-6 my-auto max-h-[95vh] overflow-y-auto">
             
-            {/* Modal Top Bar */}
             <div className="flex justify-between items-center border-b pb-3 mb-4">
               <div>
                 <h3 className="font-black text-slate-900 text-base sm:text-lg">Customer Tax Invoice: {auditPreviewInvoice.invNo}</h3>
-                <p className="text-xs text-slate-500">Customer: <strong>{auditPreviewInvoice.custName || 'Walk-in'}</strong> | Phone: {auditPreviewInvoice.custPhone || 'N/A'}</p>
+                <p className="text-xs text-slate-500">Customer: <strong>{auditPreviewInvoice.custName || 'Walk-in'}</strong> | WhatsApp: {auditPreviewInvoice.custPhone || 'N/A'}</p>
               </div>
               <button 
                 onClick={() => setAuditPreviewInvoice(null)} 
@@ -1226,16 +1265,15 @@ function App() {
               </button>
             </div>
 
-            {/* Rendered A4 Invoice View Container */}
+            {/* A4 Modal Capture Target */}
             <div id="audit-modal-printable" className="bg-white border border-slate-200 rounded-xl p-4 sm:p-8">
-              
               <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-5 rounded-lg flex justify-between items-center mb-6">
                 <div className="flex items-center gap-4">
                   <ProjectorLogo />
                   <div>
                     <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
                     <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
-                    <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847</p>
+                    <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_8](start_span)[span_8](end_span)</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1251,8 +1289,8 @@ function App() {
                   <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Billed To (Customer Details)</h3>
                   <div className="space-y-1">
                     <div><span className="text-slate-500 font-semibold">Name:</span> <strong className="text-slate-900">{auditPreviewInvoice.custName || 'Walk-in'}</strong></div>
-                    <div><span className="text-slate-500 font-semibold">Phone:</span> {auditPreviewInvoice.custPhone || 'N/A'}</div>
-                    <div><span className="text-slate-500 font-semibold">Address:</span> {auditPreviewInvoice.custAddr || 'Madurai'}</div>
+                    <div><span className="text-slate-500 font-semibold">WhatsApp:</span> {auditPreviewInvoice.custPhone || 'N/A'}</div>
+                    <div><span className="text-slate-500 font-semibold">Address:</span> {auditPreviewInvoice.custAddr || 'Madurai'}[span_9](start_span)[span_9](end_span)</div>
                     {auditPreviewInvoice.custGstin && <div><span className="text-slate-500 font-semibold">Buyer GSTIN:</span> {auditPreviewInvoice.custGstin}</div>}
                   </div>
                 </div>
@@ -1261,13 +1299,12 @@ function App() {
                   <div className="space-y-1">
                     <div><span className="text-slate-500 font-semibold">Invoice No:</span> <strong className="text-slate-900">{auditPreviewInvoice.invNo}</strong></div>
                     <div><span className="text-slate-500 font-semibold">Date:</span> {auditPreviewInvoice.date}</div>
-                    <div><span className="text-slate-500 font-semibold">Proprietor:</span> M. KANAGAVEL</div>
-                    <div><span className="text-slate-500 font-semibold">Place of Supply:</span> Tamil Nadu (33)</div>
+                    <div><span className="text-slate-500 font-semibold">Proprietor:</span> M. KANAGAVEL[span_10](start_span)[span_10](end_span)</div>
+                    <div><span className="text-slate-500 font-semibold">Place of Supply:</span> Tamil Nadu (33)[span_11](start_span)[span_11](end_span)</div>
                   </div>
                 </div>
               </div>
 
-              {/* Items Table */}
               <table className="w-full text-left border border-slate-200 text-xs mb-4">
                 <thead>
                   <tr className="bg-slate-900 text-white uppercase text-[11px]">
@@ -1293,12 +1330,11 @@ function App() {
                 </tbody>
               </table>
 
-              {/* Warranty & Financials */}
               <div className="grid grid-cols-2 gap-6 items-start mb-6">
                 <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
                   <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
                   <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
-                  <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing.</p>
+                  <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing[span_12](start_span)[span_12](end_span).</p>
                   <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
                   <div className="pt-2 text-slate-600 font-semibold border-t border-sky-200">
                     Payment Method: <strong className="text-slate-900">{auditPreviewInvoice.paymentMode}</strong>
@@ -1331,26 +1367,23 @@ function App() {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="flex justify-between items-end border-t border-slate-300 pt-4">
                 <div className="text-[11px] text-slate-500">
-                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
-                  <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002</p>
+                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_13](start_span)[span_13](end_span)</p>
+                  <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_14](start_span)[span_14](end_span)</p>
                 </div>
                 <div className="flex items-center gap-6">
                   <RubberStamp isPaid={(Number(auditPreviewInvoice.pending) || 0) === 0} />
                   <DigitalSignature />
                 </div>
               </div>
-
             </div>
 
-            {/* Modal Bottom Actions */}
             <div className="mt-4 flex flex-wrap gap-2 justify-end">
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow">
-                💬 Share Customer PDF to WhatsApp
+                💬 Share PDF to Customer WhatsApp
               </button>
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, false)}
