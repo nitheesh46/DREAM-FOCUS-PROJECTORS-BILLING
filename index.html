@@ -12,7 +12,7 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Chart.js for Graphs -->
+  <!-- Chart.js for Visual Graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- HTML2PDF Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -31,7 +31,7 @@
         width: 100% !important; 
         max-width: 100% !important;
         margin: 0 !important; 
-        padding: 6mm !important;
+        padding: 5mm !important;
         display: block !important; 
         page-break-inside: avoid !important;
         page-break-after: avoid !important;
@@ -61,7 +61,7 @@ const ProjectorLogo = () => (
   </svg>
 );
 
-// --- Authentic Commercial Rubber Stamp ---
+// --- Commercial Circular Rubber Stamp ---
 const RubberStamp = ({ isPaid }) => (
   <div style={{ width: '92px', height: '92px', transform: 'rotate(-9deg)', display: 'inline-block' }}>
     <svg viewBox="0 0 160 160" width="92" height="92" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
@@ -83,7 +83,7 @@ const RubberStamp = ({ isPaid }) => (
   </div>
 );
 
-// --- Real Handwritten Signature ---
+// --- Handwritten Signature ---
 const DigitalSignature = () => (
   <div className="text-right flex flex-col items-end" style={{ minWidth: '140px' }}>
     <span className="text-[9px] text-slate-500 font-semibold mb-0.5">Authorized Signatory</span>
@@ -110,7 +110,7 @@ const DigitalSignature = () => (
   </div>
 );
 
-// Default Seed Records
+// Starter Seed Records Across Multiple Months
 const DEFAULT_RECORDS = [
   {
     invNo: "DFP/2026/1012", date: "2026-06-12", custName: "Senthil Nathan", custPhone: "9842100001", custAddr: "KK Nagar, Madurai",
@@ -126,6 +126,24 @@ const DEFAULT_RECORDS = [
       { id: 2, desc: "Optical Prism Alignment & Deep Clean", category: "Service", qty: 1, rate: 1800 }
     ],
     grossTotal: 25800, discount: 800, exchange: 2000, taxableAmount: 23000, gstRate: 18, cgst: 2070, sgst: 2070, totalTax: 4140, netPayable: 27140, paid: 15000, pending: 12140
+  },
+  {
+    invNo: "DFP/2026/1082", date: "2026-08-05", custName: "Rajesh Kannan", custPhone: "9842100003", custAddr: "Anna Nagar, Madurai",
+    paymentStatus: "Full Paid", paymentMode: "Cash",
+    items: [{ id: 1, desc: "Chip-Level Ballast Board Repair", category: "Service", qty: 1, rate: 3500 }],
+    grossTotal: 3500, discount: 0, exchange: 0, taxableAmount: 3500, gstRate: 18, cgst: 315, sgst: 315, totalTax: 630, netPayable: 4130, paid: 4130, pending: 0
+  },
+  {
+    invNo: "DFP/2026/1104", date: "2026-08-22", custName: "Meenakshi High School", custPhone: "9842100004", custAddr: "Simmakkal, Madurai",
+    paymentStatus: "Advance Paid", paymentMode: "GPay / PhonePe UPI",
+    items: [{ id: 1, desc: "Panasonic Classroom Projector Setup", category: "Sales Unit", qty: 2, rate: 9500 }],
+    grossTotal: 19000, discount: 1000, exchange: 1500, taxableAmount: 16500, gstRate: 18, cgst: 1485, sgst: 1485, totalTax: 2970, netPayable: 19470, paid: 10000, pending: 9470
+  },
+  {
+    invNo: "DFP/2026/1125", date: "2026-09-02", custName: "Karthik Raja", custPhone: "9842100005", custAddr: "Goripalayam, Madurai",
+    paymentStatus: "Full Paid", paymentMode: "Debit / Credit Card",
+    items: [{ id: 1, desc: "Hitachi Laser Projector & Original Remote", category: "Sales Unit", qty: 1, rate: 16500 }],
+    grossTotal: 16500, discount: 500, exchange: 1000, taxableAmount: 15000, gstRate: 18, cgst: 1350, sgst: 1350, totalTax: 2700, netPayable: 17700, paid: 17700, pending: 0
   }
 ];
 
@@ -136,7 +154,7 @@ function App() {
   const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null);
   const invoiceRef = useRef(null);
 
-  // Chart References
+  // Chart Canvas & Instance References
   const barChartRef = useRef(null);
   const pieChartRef = useRef(null);
   const modeChartRef = useRef(null);
@@ -170,14 +188,16 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_EXACT_A4_STABLE_V1');
+    const saved = localStorage.getItem('DFP_ALL_CHARTS_REPORTS_V1');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
+  // Dual Filtering States for Monthly & Yearly Reports
   const [analyticsYear, setAnalyticsYear] = useState('2026');
+  const [analyticsMonth, setAnalyticsMonth] = useState('ALL');
 
   useEffect(() => {
-    localStorage.setItem('DFP_EXACT_A4_STABLE_V1', JSON.stringify(history));
+    localStorage.setItem('DFP_ALL_CHARTS_REPORTS_V1', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -195,7 +215,7 @@ function App() {
     localStorage.setItem('DFP_USER_MODE_PREF', mode);
   };
 
-  // Live Calculations
+  // Calculations
   const grossTotal = useMemo(() => items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.rate) || 0), 0), [items]);
   const taxableAmount = useMemo(() => Math.max(0, grossTotal - (Number(pricing.discount) || 0) - (Number(pricing.exchange) || 0)), [grossTotal, pricing.discount, pricing.exchange]);
   
@@ -261,7 +281,7 @@ function App() {
   const removeItem = (id) => setItems(items.filter(i => i.id !== id));
   const updateItem = (id, field, val) => setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
 
-  // Save Current Record
+  // Save Order Record
   const saveCurrentOrder = () => {
     const record = {
       ...billMeta,
@@ -303,9 +323,9 @@ function App() {
       `--------------------------\n` +
       `*Payment Mode:* ${record.paymentMode}\n` +
       `*Testing Warranty:* 3 Days\n` +
-      `Shop Contact: +91 85085 50847\n` +
-      `No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002\n\n` +
-      `_Thank you for choosing DREAM FOCUS PROJECTORS!_`;
+      `Shop Contact: +91 85085 50847\n` +[span_0](start_span)[span_0](end_span)
+      `No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002\n\n` +[span_1](start_span)[span_1](end_span)
+      `_Thank you for choosing DREAM FOCUS PROJECTORS! Attached is your verified tax invoice._`;
   };
 
   const openDirectCustomerWhatsApp = () => {
@@ -381,7 +401,7 @@ function App() {
         if (cleanPhone && cleanPhone.length === 10) {
           window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
         } else {
-          alert('1-Page PDF downloaded! Enter phone number to open WhatsApp.');
+          alert('1-Page PDF downloaded! Enter customer phone number to open direct WhatsApp chat.');
         }
       }
     } catch (err) {
@@ -451,13 +471,16 @@ function App() {
     setPricing({ discount: 0, exchange: 0, gstRate: 18, advance: 0 });
   };
 
+  // Filtered History for Monthly & Yearly Analysis
   const filteredHistory = useMemo(() => {
     return history.filter(h => {
       if (!h.date) return true;
-      const [y] = h.date.split('-');
-      return (analyticsYear === 'ALL' || y === analyticsYear);
+      const [y, m] = h.date.split('-');
+      const matchYear = analyticsYear === 'ALL' || y === analyticsYear;
+      const matchMonth = analyticsMonth === 'ALL' || m === analyticsMonth;
+      return matchYear && matchMonth;
     });
-  }, [history, analyticsYear]);
+  }, [history, analyticsYear, analyticsMonth]);
 
   const kpis = useMemo(() => {
     return filteredHistory.reduce((acc, curr) => {
@@ -493,7 +516,22 @@ function App() {
     });
   }, [history, analyticsYear]);
 
-  // Chart Rendering
+  // Payment Mode Distribution Map
+  const paymentModesMap = useMemo(() => {
+    const map = {};
+    filteredHistory.forEach(h => {
+      const mode = h.paymentMode || 'Other';
+      map[mode] = (map[mode] || 0) + (Number(h.paid) || 0);
+    });
+    return map;
+  }, [filteredHistory]);
+
+  // Pending Customers List for Reminders
+  const pendingCustomersList = useMemo(() => {
+    return filteredHistory.filter(h => (Number(h.pending) || 0) > 0);
+  }, [filteredHistory]);
+
+  // --- RENDER VISUAL CHART.JS GRAPHS ---
   useEffect(() => {
     if (tab !== 'reports') return;
 
@@ -501,6 +539,7 @@ function App() {
     if (pieChartInst.current) pieChartInst.current.destroy();
     if (modeChartInst.current) modeChartInst.current.destroy();
 
+    // 1. Monthly Performance Bar Chart (Sales vs Cash Collected vs Pending)
     if (barChartRef.current) {
       const ctx = barChartRef.current.getContext('2d');
       barChartInst.current = new Chart(ctx, {
@@ -516,11 +555,20 @@ function App() {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } }
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } },
+            tooltip: {
+              callbacks: { label: (c) => `${c.dataset.label}: ₹${Number(c.raw).toLocaleString('en-IN')}` }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (val) => '₹' + Number(val).toLocaleString('en-IN') } }
+          }
         }
       });
     }
 
+    // 2. Realized Cash vs Outstanding Due Pie Chart
     if (pieChartRef.current) {
       const ctx = pieChartRef.current.getContext('2d');
       pieChartInst.current = new Chart(ctx, {
@@ -530,31 +578,35 @@ function App() {
           datasets: [{
             data: [kpis.collected, kpis.pending],
             backgroundColor: ['#16a34a', '#dc2626'],
-            borderWidth: 2
+            borderWidth: 2,
+            hoverOffset: 4
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } } }
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } },
+            tooltip: {
+              callbacks: { label: (c) => `${c.label}: ₹${Number(c.raw).toLocaleString('en-IN')}` }
+            }
+          }
         }
       });
     }
 
+    // 3. Payment Mode Donut Chart
     if (modeChartRef.current) {
       const ctx = modeChartRef.current.getContext('2d');
-      const modesMap = {};
-      filteredHistory.forEach(h => {
-        const mode = h.paymentMode || 'Other';
-        modesMap[mode] = (modesMap[mode] || 0) + (Number(h.paid) || 0);
-      });
+      const labels = Object.keys(paymentModesMap);
+      const values = Object.values(paymentModesMap);
 
       modeChartInst.current = new Chart(ctx, {
         type: 'pie',
         data: {
-          labels: Object.keys(modesMap).length ? Object.keys(modesMap) : ['No Data'],
+          labels: labels.length ? labels : ['No Data'],
           datasets: [{
-            data: Object.values(modesMap).length ? Object.values(modesMap) : [1],
+            data: values.length ? values : [1],
             backgroundColor: ['#0284c7', '#10b981', '#f59e0b', '#8b5cf6', '#64748b'],
             borderWidth: 2
           }]
@@ -562,7 +614,12 @@ function App() {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } } }
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } },
+            tooltip: {
+              callbacks: { label: (c) => `${c.label}: ₹${Number(c.raw).toLocaleString('en-IN')}` }
+            }
+          }
         }
       });
     }
@@ -572,7 +629,7 @@ function App() {
       if (pieChartInst.current) pieChartInst.current.destroy();
       if (modeChartInst.current) modeChartInst.current.destroy();
     };
-  }, [tab, monthlyMatrix, kpis, filteredHistory]);
+  }, [tab, monthlyMatrix, kpis, paymentModesMap, filteredHistory]);
 
   const exportToCSV = () => {
     let csv = "Invoice No,Date,Customer Name,Phone,Mode,Taxable Val,GST Rate,Total GST,Net Payable,Paid,Pending Due,Status\n";
@@ -583,7 +640,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DFP_Revenue_Report_${analyticsYear}.csv`;
+    a.download = `DFP_Revenue_Report_${analyticsYear}_${analyticsMonth}.csv`;
     a.click();
   };
 
@@ -597,19 +654,19 @@ function App() {
             <ProjectorLogo />
             <div>
               <div className="font-extrabold text-sm text-slate-800 leading-tight">DREAM FOCUS</div>
-              <div className="text-[10px] text-slate-500 font-semibold">Madurai Projector Billing & Accounts</div>
+              <div className="text-[10px] text-slate-500 font-semibold">Madurai Projector Billing & Accounts[span_2](start_span)[span_2](end_span)</div>
             </div>
           </div>
 
           <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
             <button 
               onClick={() => toggleDeviceMode('mobile')}
-              className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md transition ${deviceMode === 'mobile' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+              className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'mobile' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
               📱 Mobile
             </button>
             <button 
               onClick={() => toggleDeviceMode('laptop')}
-              className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md transition ${deviceMode === 'laptop' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+              className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'laptop' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
               💻 Laptop
             </button>
           </div>
@@ -625,7 +682,7 @@ function App() {
           <button 
             onClick={() => setTab('reports')}
             className={`flex-1 py-2 font-bold rounded-lg text-xs sm:text-sm transition shadow-sm ${tab === 'reports' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'}`}>
-            📊 Reports & Analytics
+            📊 Monthly & Yearly Reports (Graphs & Charts)
           </button>
         </div>
       </div>
@@ -818,7 +875,7 @@ function App() {
                 <div>
                   <h1 className="text-base sm:text-lg font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
                   <p className="text-sky-300 text-[9px] font-semibold tracking-wider uppercase mt-0.5">Sales • Chip-Level Service • Accessories</p>
-                  <p className="text-slate-300 text-[9px]">Sellur, Madurai - 625002 • Phone: +91 85085 50847</p>
+                  <p className="text-slate-300 text-[9px]">Sellur, Madurai - 625002 • Phone: +91 85085 50847[span_3](start_span)[span_3](end_span)</p>
                 </div>
               </div>
               <div className="text-right">
@@ -856,7 +913,7 @@ function App() {
                     <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
                   </div>
                   <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Proprietor:</span>
-                    <span className="font-semibold text-slate-800 text-[10.5px]">M. KANAGAVEL</span>
+                    <span className="font-semibold text-slate-800 text-[10.5px]">M. KANAGAVEL[span_4](start_span)[span_4](end_span)</span>
                   </div>
                 </div>
               </div>
@@ -917,7 +974,7 @@ function App() {
               <div className="bg-sky-50 border-l-4 border-sky-600 p-2 rounded-r text-[10px] text-slate-700 space-y-1">
                 <h4 className="font-bold text-sky-900 uppercase tracking-wide text-[9.5px]">🛡️ 3-Day Testing Warranty</h4>
                 <p>• 3-day testing warranty covers optical clarity and lamp performance.</p>
-                <p>• Free diagnostic checkup for future servicing and replacement lamps.</p>
+                <p>• Free diagnostic checkup for future servicing and replacement lamps[span_5](start_span)[span_5](end_span).</p>
                 <p className="text-slate-500">• Power ballast surge burn & liquid ingress are excluded.</p>
                 
                 <div className="pt-1 border-t border-sky-200 space-y-1 no-print">
@@ -1011,17 +1068,17 @@ function App() {
             {/* Thank You Note */}
             <div className="bg-slate-50 border border-slate-200 rounded p-1.5 text-center mb-2">
               <div className="text-[10.5px] font-bold text-slate-800">
-                ✨ Thank you for choosing DREAM FOCUS PROJECTORS!
+                ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_6](start_span)[span_6](end_span)!
               </div>
               <div className="text-[9px] text-slate-500">
-                Contact: <strong>+91 85085 50847</strong> | No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002
+                Contact: <strong>+91 85085 50847</strong> | No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_7](start_span)[span_7](end_span)
               </div>
             </div>
 
             {/* Footer Stamp & Signature */}
             <div className="flex justify-between items-end border-t border-slate-300 pt-1.5">
               <div className="text-[9.5px] text-slate-500">
-                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
+                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_8](start_span)[span_8](end_span)</p>
                 <p>Payment Mode: <strong className="text-slate-900 bg-slate-100 px-1 py-0.2 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
               </div>
 
@@ -1059,70 +1116,180 @@ function App() {
           )}
         </div>
       ) : (
-        /* REPORTS SECTION */
+        /* ========================================================================= */
+        /* FULL RESTORED REPORTS & ANALYTICS SECTION WITH CHARTS, MATRIX & TRACKER */
+        /* ========================================================================= */
         <div className="space-y-4">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-wrap justify-between items-center gap-2">
+          
+          {/* Top Filters: Both Year and Month Selectors */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap justify-between items-center gap-2.5">
             <div>
               <h2 className="text-sm sm:text-base font-black text-slate-900">Revenue Analytics & Audit Ledger</h2>
               <p className="text-[11px] text-slate-500">Visual performance charts, collections, and customer balance tracking.</p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-slate-600">Year:</label>
-              <select className="bg-slate-50 border rounded px-2 py-1 text-xs font-bold" value={analyticsYear} onChange={e => setAnalyticsYear(e.target.value)}>
-                <option value="ALL">All Years</option>
-                <option value="2026">2026</option>
-                <option value="2027">2027</option>
-              </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <div>
+                <label className="text-xs font-bold text-slate-600 mr-1">Year:</label>
+                <select className="bg-slate-50 border rounded px-2 py-1 text-xs font-bold" value={analyticsYear} onChange={e => setAnalyticsYear(e.target.value)}>
+                  <option value="ALL">All Years</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
 
-              <button onClick={exportToCSV} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-2.5 py-1 rounded transition">
-                📥 Export Excel
+              <div>
+                <label className="text-xs font-bold text-slate-600 mr-1">Month:</label>
+                <select className="bg-slate-50 border rounded px-2 py-1 text-xs font-bold" value={analyticsMonth} onChange={e => setAnalyticsMonth(e.target.value)}>
+                  <option value="ALL">All Months (Yearly Summary)</option>
+                  <option value="01">January</option>
+                  <option value="02">February</option>
+                  <option value="03">March</option>
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+
+              <button onClick={exportToCSV} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-2.5 py-1 rounded transition flex items-center gap-1">
+                📥 Export CSV
               </button>
             </div>
           </div>
 
-          {/* KPI Cards */}
+          {/* 4 Executive KPI Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="bg-white border-l-4 border-sky-600 p-2.5 rounded-xl border border-slate-200 shadow-sm">
               <span className="text-[10px] font-bold text-slate-500 uppercase">Gross Sales</span>
               <div className="text-base font-black text-slate-900 mt-0.5">₹{kpis.sales.toLocaleString('en-IN')}</div>
+              <span className="text-[9.5px] text-slate-400">Taxable: ₹{kpis.taxable.toLocaleString('en-IN')}</span>
             </div>
             <div className="bg-white border-l-4 border-purple-600 p-2.5 rounded-xl border border-slate-200 shadow-sm">
               <span className="text-[10px] font-bold text-slate-500 uppercase">GST Collected</span>
               <div className="text-base font-black text-purple-700 mt-0.5">₹{kpis.gst.toLocaleString('en-IN')}</div>
+              <span className="text-[9.5px] text-purple-500">CGST + SGST Split</span>
             </div>
             <div className="bg-white border-l-4 border-emerald-600 p-2.5 rounded-xl border border-slate-200 shadow-sm">
               <span className="text-[10px] font-bold text-slate-500 uppercase">Cash/UPI Received</span>
               <div className="text-base font-black text-emerald-700 mt-0.5">₹{kpis.collected.toLocaleString('en-IN')}</div>
+              <span className="text-[9.5px] text-emerald-600 font-semibold">{kpis.sales > 0 ? Math.round((kpis.collected / kpis.sales) * 100) : 0}% Realized</span>
             </div>
             <div className="bg-white border-l-4 border-red-600 p-2.5 rounded-xl border border-slate-200 shadow-sm">
               <span className="text-[10px] font-bold text-slate-500 uppercase">Pending Dues</span>
               <div className="text-base font-black text-red-600 mt-0.5">₹{kpis.pending.toLocaleString('en-IN')}</div>
+              <span className="text-[9.5px] text-red-500 font-semibold">{pendingCustomersList.length} Client(s) Due</span>
             </div>
           </div>
 
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-3">
-              <h3 className="font-bold text-slate-800 text-xs mb-1.5">📈 12-Month Performance Comparison</h3>
-              <div className="relative h-48 w-full">
-                <canvas ref={barChartRef}></canvas>
-              </div>
+          {/* VISUAL CHARTS ROW 1: 12-Month Performance Bar Chart */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
+            <h3 className="font-bold text-slate-800 text-xs mb-1.5 flex items-center justify-between">
+              <span>📈 12-Month Performance Comparison ({analyticsYear})</span>
+              <span className="text-[10px] text-slate-400 font-normal">Monthly Trends</span>
+            </h3>
+            <div className="relative h-56 sm:h-64 w-full">
+              <canvas ref={barChartRef}></canvas>
             </div>
+          </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3">
-              <h3 className="font-bold text-slate-800 text-xs mb-1.5">🥧 Collection Ratio</h3>
-              <div className="relative h-48 w-full">
+          {/* VISUAL CHARTS ROW 2: 2 Donut & Pie Charts Side by Side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
+              <h3 className="font-bold text-slate-800 text-xs mb-1.5">
+                🥧 Realized Revenue vs. Outstanding Due
+              </h3>
+              <div className="relative h-48 sm:h-56 w-full">
                 <canvas ref={pieChartRef}></canvas>
               </div>
             </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
+              <h3 className="font-bold text-slate-800 text-xs mb-1.5">
+                🍩 Payment Mode Distribution (UPI, Cash, Bank, Card)
+              </h3>
+              <div className="relative h-48 sm:h-56 w-full">
+                <canvas ref={modeChartRef}></canvas>
+              </div>
+            </div>
+          </div>
+
+          {/* 12-Month Detailed Performance Matrix Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
+            <h3 className="font-bold text-slate-900 text-xs mb-2 flex justify-between items-center">
+              <span>📅 Month-by-Month Financial Summary Matrix ({analyticsYear})</span>
+              <span className="text-[10px] text-slate-400">Audited Monthly Breakup</span>
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border border-slate-200">
+                <thead className="bg-slate-900 text-white uppercase text-[9.5px]">
+                  <tr>
+                    <th className="p-1.5">Month</th>
+                    <th className="p-1.5 text-center">Orders</th>
+                    <th className="p-1.5 text-right">Sales (₹)</th>
+                    <th className="p-1.5 text-right">GST (₹)</th>
+                    <th className="p-1.5 text-right">Collected (₹)</th>
+                    <th className="p-1.5 text-right">Pending (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-medium">
+                  {monthlyMatrix.map(m => (
+                    <tr key={m.code} className={`hover:bg-slate-50 ${m.orders > 0 ? 'bg-sky-50/20' : ''}`}>
+                      <td className="p-1.5 font-bold text-slate-800">{m.name} ({analyticsYear})</td>
+                      <td className="p-1.5 text-center">{m.orders}</td>
+                      <td className="p-1.5 text-right font-bold">₹{m.sales.toLocaleString('en-IN')}</td>
+                      <td className="p-1.5 text-right text-purple-700">₹{m.gst.toLocaleString('en-IN')}</td>
+                      <td className="p-1.5 text-right text-emerald-700">₹{m.collected.toLocaleString('en-IN')}</td>
+                      <td className={`p-1.5 text-right font-black ${m.pending > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                        ₹{m.pending.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pending Debt Follow-up Section with 1-Click WhatsApp Reminders */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
+            <h3 className="font-bold text-red-600 text-xs mb-2">⚠️ Pending Debt Collection Tracker</h3>
+            {pendingCustomersList.length === 0 ? (
+              <div className="bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg text-center text-xs text-emerald-800 font-bold">
+                🎉 No pending balances! All customer accounts are fully cleared.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-56 overflow-y-auto">
+                {pendingCustomersList.map(c => (
+                  <div key={c.invNo} className="bg-red-50/60 border border-red-200 p-2 rounded-lg flex justify-between items-center text-xs">
+                    <div>
+                      <div className="font-bold text-slate-800">{c.custName || 'Customer'} <span className="text-slate-400 font-mono text-[10px]">({c.invNo})</span></div>
+                      <div className="text-[10.5px] text-red-600 font-black">Due: ₹{Number(c.pending).toLocaleString('en-IN')}</div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const cleanPhone = (c.custPhone || '').replace(/\D/g, '').slice(-10);
+                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you[span_9](start_span)[span_9](end_span)!`;
+                        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] flex items-center gap-1">
+                      💬 WhatsApp Reminder
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* COMPLETE AUDIT LEDGER WITH DIRECT PDF VIEW */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-bold text-slate-900 text-xs">📋 Complete Invoice Audit Ledger</h3>
-              <span className="text-[10px] text-slate-500">Click <strong>👁️ PDF View</strong> for 1-page bill</span>
+              <span className="text-[10px] text-slate-500">Click <strong>👁️ PDF View</strong> for full 1-page bill</span>
             </div>
             
             <div className="overflow-x-auto">
@@ -1133,6 +1300,8 @@ function App() {
                     <th className="p-1.5">Date</th>
                     <th className="p-1.5">Customer</th>
                     <th className="p-1.5">Mode</th>
+                    <th className="p-1.5 text-right">Taxable</th>
+                    <th className="p-1.5 text-right">GST</th>
                     <th className="p-1.5 text-right">Total</th>
                     <th className="p-1.5 text-right">Paid</th>
                     <th className="p-1.5 text-right">Due</th>
@@ -1146,6 +1315,8 @@ function App() {
                       <td className="p-1.5 text-slate-500">{item.date}</td>
                       <td className="p-1.5 font-semibold">{item.custName || 'Walk-in'}</td>
                       <td className="p-1.5 text-slate-600">{item.paymentMode || 'UPI'}</td>
+                      <td className="p-1.5 text-right">₹{(item.taxableAmount || 0).toLocaleString('en-IN')}</td>
+                      <td className="p-1.5 text-right text-purple-700">₹{(item.totalTax || 0).toLocaleString('en-IN')}</td>
                       <td className="p-1.5 text-right font-black">₹{(item.netPayable || 0).toLocaleString('en-IN')}</td>
                       <td className="p-1.5 text-right text-emerald-700 font-semibold">₹{(Number(item.paid) || 0).toLocaleString('en-IN')}</td>
                       <td className="p-1.5 text-right text-red-600 font-black">₹{(Number(item.pending) || 0).toLocaleString('en-IN')}</td>
@@ -1205,7 +1376,7 @@ function App() {
                   <ProjectorLogo />
                   <div>
                     <h1 className="text-sm font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
-                    <p className="text-slate-300 text-[8.5px] mt-0.5">Sellur, Madurai - 625002 • Phone: +91 85085 50847</p>
+                    <p className="text-slate-300 text-[8.5px] mt-0.5">Sellur, Madurai - 625002 • Phone: +91 85085 50847[span_10](start_span)[span_10](end_span)</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1227,7 +1398,7 @@ function App() {
                   <h3 className="font-bold text-sky-700 uppercase tracking-wide border-b border-slate-200 pb-0.5 mb-0.5 text-[9px]">Invoice</h3>
                   <div>No: <strong className="text-slate-900">{auditPreviewInvoice.invNo}</strong></div>
                   <div>Date: {auditPreviewInvoice.date}</div>
-                  <div>Proprietor: M. KANAGAVEL</div>
+                  <div>Proprietor: M. KANAGAVEL[span_11](start_span)[span_11](end_span)</div>
                 </div>
               </div>
 
@@ -1258,7 +1429,7 @@ function App() {
                 <div className="bg-sky-50 border-l-4 border-sky-600 p-1.5 rounded-r space-y-0.5 text-slate-700">
                   <h4 className="font-bold text-sky-900 uppercase text-[9px]">🛡️ 3-Day Testing Warranty</h4>
                   <p>• 3-day testing warranty covers lamp and optical clarity.</p>
-                  <p>• Free diagnostic testing for future maintenance.</p>
+                  <p>• Free diagnostic testing for future maintenance[span_12](start_span)[span_12](end_span).</p>
                   <div>Payment: <strong>{auditPreviewInvoice.paymentMode}</strong></div>
                 </div>
 
@@ -1291,17 +1462,17 @@ function App() {
               {/* Thank You Note */}
               <div className="bg-slate-50 border border-slate-200 rounded p-1 text-center mb-2">
                 <div className="text-[10px] font-bold text-slate-800">
-                  ✨ Thank you for choosing DREAM FOCUS PROJECTORS!
+                  ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_13](start_span)[span_13](end_span)!
                 </div>
                 <div className="text-[8.5px] text-slate-500">
-                  Phone: <strong>+91 85085 50847</strong> | Sellur, Madurai - 625002
+                  Phone: <strong>+91 85085 50847</strong> | Sellur, Madurai - 625002[span_14](start_span)[span_14](end_span)
                 </div>
               </div>
 
               <div className="flex justify-between items-end border-t border-slate-300 pt-1.5">
                 <div className="text-[9px] text-slate-500">
-                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
-                  <p>Madurai Branch</p>
+                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_15](start_span)[span_15](end_span)</p>
+                  <p>Madurai Branch[span_16](start_span)[span_16](end_span)</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <RubberStamp isPaid={(Number(auditPreviewInvoice.pending) || 0) === 0} />
