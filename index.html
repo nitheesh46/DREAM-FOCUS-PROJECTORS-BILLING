@@ -22,7 +22,13 @@
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; padding: 0 !important; margin: 0 !important; }
-      #printable-invoice { box-shadow: none !important; border: none !important; width: 100% !important; margin: 0 !important; display: block !important; }
+      #printable-invoice, #modal-printable-invoice { 
+        box-shadow: none !important; 
+        border: none !important; 
+        width: 100% !important; 
+        margin: 0 !important; 
+        display: block !important; 
+      }
     }
   </style>
 </head>
@@ -106,7 +112,9 @@ function App() {
   const [tab, setTab] = useState('create');
   const [deviceMode, setDeviceMode] = useState(() => window.innerWidth < 768 ? 'mobile' : 'laptop');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null); // Direct Customer PDF Modal from Audit Table
   const invoiceRef = useRef(null);
+  const auditModalRef = useRef(null);
 
   // Chart Canvas & Instance Refs
   const barChartRef = useRef(null);
@@ -142,14 +150,14 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_CHARTS_BILLS_V7');
+    const saved = localStorage.getItem('DFP_CHARTS_BILLS_V8');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
   const [analyticsYear, setAnalyticsYear] = useState('2026');
 
   useEffect(() => {
-    localStorage.setItem('DFP_CHARTS_BILLS_V7', JSON.stringify(history));
+    localStorage.setItem('DFP_CHARTS_BILLS_V8', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -188,7 +196,7 @@ function App() {
     return Math.max(0, gstBreakdown.netPayable - paidVal);
   }, [gstBreakdown.netPayable, pricing.advance]);
 
-  // --- Robust Payment Status & Advance Management ---
+  // Status & Payment Sync
   const handleStatusChange = (status) => {
     setBillMeta(prev => ({ ...prev, paymentStatus: status }));
     if (status === 'Full Paid') {
@@ -196,7 +204,6 @@ function App() {
     } else if (status === 'Pending (Zero Advance)') {
       setPricing(prev => ({ ...prev, advance: 0 }));
     } else if (status === 'Advance Paid') {
-      // If was previously Full Paid, drop to 50% or prompt so user can type advance
       if (Number(pricing.advance) >= gstBreakdown.netPayable || Number(pricing.advance) === 0) {
         const half = Math.round(gstBreakdown.netPayable / 2);
         setPricing(prev => ({ ...prev, advance: half > 0 ? half : 5000 }));
@@ -211,14 +218,12 @@ function App() {
 
   const handleSetAdvance = () => {
     setBillMeta(prev => ({ ...prev, paymentStatus: 'Advance Paid' }));
-    // If currently full paid, set default advance to half
     if (Number(pricing.advance) >= gstBreakdown.netPayable || Number(pricing.advance) === 0) {
       const half = Math.round(gstBreakdown.netPayable / 2);
       setPricing(prev => ({ ...prev, advance: half > 0 ? half : 5000 }));
     }
   };
 
-  // Typing in Amount Paid automatically syncs the status
   const handleAmountPaidInput = (e) => {
     const val = e.target.value === '' ? '' : Number(e.target.value);
     setPricing(prev => ({ ...prev, advance: val }));
@@ -262,7 +267,7 @@ function App() {
     return record;
   };
 
-  // PDF Export & WhatsApp Share
+  // PDF Engine & WhatsApp Share
   const sharePDFDirectly = async () => {
     const record = saveCurrentOrder();
     const opt = {
@@ -295,6 +300,46 @@ function App() {
       }
     } catch (err) {
       console.error(err);
+      window.print();
+    }
+  };
+
+  // Direct PDF Download / WhatsApp Share for Past Audit Invoice Modal
+  const printOrShareAuditInvoice = async (inv, isWhatsApp = false) => {
+    const element = document.getElementById('audit-modal-printable');
+    if (!element) return;
+
+    const opt = {
+      margin: 5,
+      filename: `${inv.invNo.replace(/\//g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      if (isWhatsApp) {
+        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+        const pdfFile = new File([pdfBlob], `${inv.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
+
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({
+            files: [pdfFile],
+            title: `Invoice ${inv.invNo}`,
+            text: `Invoice from DREAM FOCUS PROJECTORS for ${inv.custName || 'Customer'}`
+          });
+        } else {
+          html2pdf().set(opt).from(element).save();
+          if (inv.custPhone) {
+            const msg = `*DREAM FOCUS PROJECTORS*\nInvoice: ${inv.invNo}\nHi ${inv.custName || 'Customer'},\n*Total Bill:* ₹${inv.netPayable}\n*Paid:* ₹${inv.paid}\n*Pending Due:* ₹${inv.pending}\nContact: +91 85085 50847`;
+            window.open(`https://wa.me/91${inv.custPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+          }
+        }
+      } else {
+        html2pdf().set(opt).from(element).save();
+      }
+    } catch (e) {
+      console.error(e);
       window.print();
     }
   };
@@ -945,7 +990,9 @@ function App() {
           )}
         </div>
       ) : (
-        /* REPORTS SECTION */
+        /* ========================================================================= */
+        /* REPORTS SECTION: VISUAL GRAPHS & AUDIT LEDGER WITH CUSTOMER PDF VIEW */
+        /* ========================================================================= */
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap justify-between items-center gap-3">
             <div>
@@ -1085,9 +1132,15 @@ function App() {
             )}
           </div>
 
-          {/* Audit Table */}
+          {/* ========================================================================= */}
+          {/* COMPLETE INVOICE AUDIT LEDGER - WITH DIRECT CUSTOMER PDF VIEW BUTTON */}
+          {/* ========================================================================= */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <h3 className="font-bold text-slate-900 text-xs sm:text-sm mb-3">📋 Complete Invoice Audit Ledger</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-slate-900 text-xs sm:text-sm">📋 Complete Invoice Audit Ledger</h3>
+              <span className="text-[11px] text-slate-500 font-medium">Click <strong>👁️ PDF View</strong> to inspect & download any customer bill</span>
+            </div>
+            
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border border-slate-200">
                 <thead className="bg-slate-900 text-white uppercase text-[10px] sm:text-[11px]">
@@ -1101,7 +1154,7 @@ function App() {
                     <th className="p-2 text-right">Total</th>
                     <th className="p-2 text-right">Paid</th>
                     <th className="p-2 text-right">Due</th>
-                    <th className="p-2 text-center no-print">Action</th>
+                    <th className="p-2 text-center no-print">Customer Bill Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -1116,7 +1169,14 @@ function App() {
                       <td className="p-2 text-right font-black">₹{(item.netPayable || 0).toLocaleString('en-IN')}</td>
                       <td className="p-2 text-right text-emerald-700 font-semibold">₹{(Number(item.paid) || 0).toLocaleString('en-IN')}</td>
                       <td className="p-2 text-right text-red-600 font-black">₹{(Number(item.pending) || 0).toLocaleString('en-IN')}</td>
-                      <td className="p-2 text-center no-print">
+                      <td className="p-2 text-center no-print whitespace-nowrap">
+                        {/* Direct Customer PDF View Button */}
+                        <button 
+                          onClick={() => setAuditPreviewInvoice(item)}
+                          className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-2 py-1 rounded text-[11px] shadow-sm mr-1.5 transition inline-flex items-center gap-1">
+                          👁️ PDF View
+                        </button>
+                        {/* Edit in Main Screen */}
                         <button 
                           onClick={() => {
                             setBillMeta({
@@ -1124,14 +1184,15 @@ function App() {
                               custPhone: item.custPhone, custAddr: item.custAddr, custGstin: item.custGstin || '',
                               paymentStatus: item.paymentStatus, paymentMode: item.paymentMode || 'GPay / PhonePe UPI'
                             });
-                            setItems(item.items);
+                            setItems(item.items || []);
                             setPricing({ discount: item.discount, exchange: item.exchange, gstRate: item.gstRate || 18, advance: item.paid });
                             setTab('create');
                           }}
-                          className="text-sky-600 hover:text-sky-800 font-bold mr-2">
-                          Load
+                          className="text-slate-600 hover:text-slate-900 font-bold px-1.5 py-1 text-[11px] mr-1">
+                          ✏️ Edit
                         </button>
-                        <button onClick={() => setHistory(history.filter(h => h.invNo !== item.invNo))} className="text-red-500 hover:text-red-700 font-bold">
+                        {/* Delete */}
+                        <button onClick={() => setHistory(history.filter(h => h.invNo !== item.invNo))} className="text-red-500 hover:text-red-700 font-bold px-1 py-1 text-[11px]">
                           ✕
                         </button>
                       </td>
@@ -1142,6 +1203,168 @@ function App() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DIRECT CUSTOMER INVOICE PDF VIEW MODAL (FROM AUDIT LEDGER) */}
+      {/* ========================================================================= */}
+      {auditPreviewInvoice && (
+        <div className="fixed inset-0 bg-slate-900/75 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto no-print">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl p-4 sm:p-6 my-auto max-h-[95vh] overflow-y-auto">
+            
+            {/* Modal Top Bar */}
+            <div className="flex justify-between items-center border-b pb-3 mb-4">
+              <div>
+                <h3 className="font-black text-slate-900 text-base sm:text-lg">Customer Tax Invoice: {auditPreviewInvoice.invNo}</h3>
+                <p className="text-xs text-slate-500">Customer: <strong>{auditPreviewInvoice.custName || 'Walk-in'}</strong> | Phone: {auditPreviewInvoice.custPhone || 'N/A'}</p>
+              </div>
+              <button 
+                onClick={() => setAuditPreviewInvoice(null)} 
+                className="text-slate-400 hover:text-slate-700 font-black text-xl p-1">
+                ✕
+              </button>
+            </div>
+
+            {/* Rendered A4 Invoice View Container */}
+            <div id="audit-modal-printable" className="bg-white border border-slate-200 rounded-xl p-4 sm:p-8">
+              
+              <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-5 rounded-lg flex justify-between items-center mb-6">
+                <div className="flex items-center gap-4">
+                  <ProjectorLogo />
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
+                    <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
+                    <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-amber-400 font-black text-xl tracking-wider block">TAX INVOICE</span>
+                  <span className={`text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide inline-block mt-1 ${(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'bg-emerald-500' : 'bg-amber-500'}`}>
+                    {(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'PAID FULL' : auditPreviewInvoice.paymentStatus.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-xs">
+                <div>
+                  <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Billed To (Customer Details)</h3>
+                  <div className="space-y-1">
+                    <div><span className="text-slate-500 font-semibold">Name:</span> <strong className="text-slate-900">{auditPreviewInvoice.custName || 'Walk-in'}</strong></div>
+                    <div><span className="text-slate-500 font-semibold">Phone:</span> {auditPreviewInvoice.custPhone || 'N/A'}</div>
+                    <div><span className="text-slate-500 font-semibold">Address:</span> {auditPreviewInvoice.custAddr || 'Madurai'}</div>
+                    {auditPreviewInvoice.custGstin && <div><span className="text-slate-500 font-semibold">Buyer GSTIN:</span> {auditPreviewInvoice.custGstin}</div>}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Invoice Meta</h3>
+                  <div className="space-y-1">
+                    <div><span className="text-slate-500 font-semibold">Invoice No:</span> <strong className="text-slate-900">{auditPreviewInvoice.invNo}</strong></div>
+                    <div><span className="text-slate-500 font-semibold">Date:</span> {auditPreviewInvoice.date}</div>
+                    <div><span className="text-slate-500 font-semibold">Proprietor:</span> M. KANAGAVEL</div>
+                    <div><span className="text-slate-500 font-semibold">Place of Supply:</span> Tamil Nadu (33)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <table className="w-full text-left border border-slate-200 text-xs mb-4">
+                <thead>
+                  <tr className="bg-slate-900 text-white uppercase text-[11px]">
+                    <th className="p-2 text-center w-10">#</th>
+                    <th className="p-2">Item Description</th>
+                    <th className="p-2 text-center w-24">Category</th>
+                    <th className="p-2 text-center w-16">Qty</th>
+                    <th className="p-2 text-right w-24">Rate (₹)</th>
+                    <th className="p-2 text-right w-24">Total (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {(auditPreviewInvoice.items || []).map((it, idx) => (
+                    <tr key={it.id || idx}>
+                      <td className="p-2 text-center font-bold text-slate-500">{idx + 1}</td>
+                      <td className="p-2 font-medium text-slate-800">{it.desc}</td>
+                      <td className="p-2 text-center text-slate-600">{it.category}</td>
+                      <td className="p-2 text-center font-bold">{it.qty}</td>
+                      <td className="p-2 text-right font-semibold">₹{Number(it.rate).toLocaleString('en-IN')}</td>
+                      <td className="p-2 text-right font-bold text-slate-900">₹{((Number(it.qty) || 1) * (Number(it.rate) || 0)).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Warranty & Financials */}
+              <div className="grid grid-cols-2 gap-6 items-start mb-6">
+                <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
+                  <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
+                  <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
+                  <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing.</p>
+                  <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
+                  <div className="pt-2 text-slate-600 font-semibold border-t border-sky-200">
+                    Payment Method: <strong className="text-slate-900">{auditPreviewInvoice.paymentMode}</strong>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200 text-xs space-y-1.5 font-medium">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Taxable Value:</span>
+                    <span>₹{(auditPreviewInvoice.taxableAmount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  {(Number(auditPreviewInvoice.gstRate) || 0) > 0 && (
+                    <div className="flex justify-between text-purple-700">
+                      <span>Total GST Tax ({auditPreviewInvoice.gstRate}%):</span>
+                      <span>₹{(auditPreviewInvoice.totalTax || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-slate-900 font-black border-t pt-1 text-sm">
+                    <span>Net Total:</span>
+                    <span>₹{(auditPreviewInvoice.netPayable || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>Amount Paid:</span>
+                    <span>₹{(Number(auditPreviewInvoice.paid) || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className={`flex justify-between font-black border-t pt-1 text-sm ${(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <span>{(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'PAID IN FULL' : 'PENDING BALANCE:'}</span>
+                    <span>₹{(Number(auditPreviewInvoice.pending) || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-between items-end border-t border-slate-300 pt-4">
+                <div className="text-[11px] text-slate-500">
+                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
+                  <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002</p>
+                </div>
+                <div className="flex items-center gap-6">
+                  <RubberStamp isPaid={(Number(auditPreviewInvoice.pending) || 0) === 0} />
+                  <DigitalSignature />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div className="mt-4 flex flex-wrap gap-2 justify-end">
+              <button 
+                onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow">
+                💬 Share Customer PDF to WhatsApp
+              </button>
+              <button 
+                onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, false)}
+                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow">
+                🖨️ Download / Print PDF
+              </button>
+              <button 
+                onClick={() => setAuditPreviewInvoice(null)}
+                className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-2 rounded-lg text-xs">
+                ✕ Close
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 
