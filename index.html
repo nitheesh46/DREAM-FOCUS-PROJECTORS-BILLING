@@ -116,7 +116,7 @@ function App() {
   const pieChartInst = useRef(null);
   const modeChartInst = useRef(null);
 
-  // Form State (Cleaned - No hardcoded shop GSTIN)
+  // Form State
   const [billMeta, setBillMeta] = useState({
     invNo: `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`,
     date: new Date().toISOString().slice(0, 10),
@@ -142,15 +142,14 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_CHARTS_BILLS_V6');
+    const saved = localStorage.getItem('DFP_CHARTS_BILLS_V7');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
   const [analyticsYear, setAnalyticsYear] = useState('2026');
-  const [analyticsMonth, setAnalyticsMonth] = useState('ALL');
 
   useEffect(() => {
-    localStorage.setItem('DFP_CHARTS_BILLS_V6', JSON.stringify(history));
+    localStorage.setItem('DFP_CHARTS_BILLS_V7', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -189,19 +188,48 @@ function App() {
     return Math.max(0, gstBreakdown.netPayable - paidVal);
   }, [gstBreakdown.netPayable, pricing.advance]);
 
-  // Status & Full Paid Sync
+  // --- Robust Payment Status & Advance Management ---
   const handleStatusChange = (status) => {
     setBillMeta(prev => ({ ...prev, paymentStatus: status }));
     if (status === 'Full Paid') {
       setPricing(prev => ({ ...prev, advance: gstBreakdown.netPayable }));
     } else if (status === 'Pending (Zero Advance)') {
       setPricing(prev => ({ ...prev, advance: 0 }));
+    } else if (status === 'Advance Paid') {
+      // If was previously Full Paid, drop to 50% or prompt so user can type advance
+      if (Number(pricing.advance) >= gstBreakdown.netPayable || Number(pricing.advance) === 0) {
+        const half = Math.round(gstBreakdown.netPayable / 2);
+        setPricing(prev => ({ ...prev, advance: half > 0 ? half : 5000 }));
+      }
     }
   };
 
   const handlePayFull = () => {
     setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
     setPricing(prev => ({ ...prev, advance: gstBreakdown.netPayable }));
+  };
+
+  const handleSetAdvance = () => {
+    setBillMeta(prev => ({ ...prev, paymentStatus: 'Advance Paid' }));
+    // If currently full paid, set default advance to half
+    if (Number(pricing.advance) >= gstBreakdown.netPayable || Number(pricing.advance) === 0) {
+      const half = Math.round(gstBreakdown.netPayable / 2);
+      setPricing(prev => ({ ...prev, advance: half > 0 ? half : 5000 }));
+    }
+  };
+
+  // Typing in Amount Paid automatically syncs the status
+  const handleAmountPaidInput = (e) => {
+    const val = e.target.value === '' ? '' : Number(e.target.value);
+    setPricing(prev => ({ ...prev, advance: val }));
+    const num = val === '' ? 0 : val;
+    if (num >= gstBreakdown.netPayable && gstBreakdown.netPayable > 0) {
+      setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
+    } else if (num === 0) {
+      setBillMeta(prev => ({ ...prev, paymentStatus: 'Pending (Zero Advance)' }));
+    } else {
+      setBillMeta(prev => ({ ...prev, paymentStatus: 'Advance Paid' }));
+    }
   };
 
   // Item List Handlers
@@ -234,7 +262,7 @@ function App() {
     return record;
   };
 
-  // PDF Engine & WhatsApp Share
+  // PDF Export & WhatsApp Share
   const sharePDFDirectly = async () => {
     const record = saveCurrentOrder();
     const opt = {
@@ -286,12 +314,10 @@ function App() {
   const filteredHistory = useMemo(() => {
     return history.filter(h => {
       if (!h.date) return true;
-      const [y, m] = h.date.split('-');
-      const matchYear = analyticsYear === 'ALL' || y === analyticsYear;
-      const matchMonth = analyticsMonth === 'ALL' || m === analyticsMonth;
-      return matchYear && matchMonth;
+      const [y] = h.date.split('-');
+      return (analyticsYear === 'ALL' || y === analyticsYear);
     });
-  }, [history, analyticsYear, analyticsMonth]);
+  }, [history, analyticsYear]);
 
   const kpis = useMemo(() => {
     return filteredHistory.reduce((acc, curr) => {
@@ -348,24 +374,9 @@ function App() {
         data: {
           labels: monthlyMatrix.map(m => m.name),
           datasets: [
-            {
-              label: 'Gross Sales (₹)',
-              data: monthlyMatrix.map(m => m.sales),
-              backgroundColor: '#0284c7',
-              borderRadius: 4
-            },
-            {
-              label: 'Cash/UPI Collected (₹)',
-              data: monthlyMatrix.map(m => m.collected),
-              backgroundColor: '#16a34a',
-              borderRadius: 4
-            },
-            {
-              label: 'Pending Balance Due (₹)',
-              data: monthlyMatrix.map(m => m.pending),
-              backgroundColor: '#dc2626',
-              borderRadius: 4
-            }
+            { label: 'Gross Sales (₹)', data: monthlyMatrix.map(m => m.sales), backgroundColor: '#0284c7', borderRadius: 4 },
+            { label: 'Cash/UPI Collected (₹)', data: monthlyMatrix.map(m => m.collected), backgroundColor: '#16a34a', borderRadius: 4 },
+            { label: 'Pending Balance Due (₹)', data: monthlyMatrix.map(m => m.pending), backgroundColor: '#dc2626', borderRadius: 4 }
           ]
         },
         options: {
@@ -373,17 +384,10 @@ function App() {
           maintainAspectRatio: false,
           plugins: {
             legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } },
-            tooltip: {
-              callbacks: {
-                label: (c) => `${c.dataset.label}: ₹${Number(c.raw).toLocaleString('en-IN')}`
-              }
-            }
+            tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ₹${Number(c.raw).toLocaleString('en-IN')}` } }
           },
           scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { callback: (val) => '₹' + Number(val).toLocaleString('en-IN') }
-            }
+            y: { beginAtZero: true, ticks: { callback: (val) => '₹' + Number(val).toLocaleString('en-IN') } }
           }
         }
       });
@@ -408,11 +412,7 @@ function App() {
           maintainAspectRatio: false,
           plugins: {
             legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } },
-            tooltip: {
-              callbacks: {
-                label: (c) => `₹${Number(c.raw).toLocaleString('en-IN')}`
-              }
-            }
+            tooltip: { callbacks: { label: (c) => `₹${Number(c.raw).toLocaleString('en-IN')}` } }
           }
         }
       });
@@ -445,11 +445,7 @@ function App() {
           maintainAspectRatio: false,
           plugins: {
             legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } },
-            tooltip: {
-              callbacks: {
-                label: (c) => `₹${Number(c.raw).toLocaleString('en-IN')}`
-              }
-            }
+            tooltip: { callbacks: { label: (c) => `₹${Number(c.raw).toLocaleString('en-IN')}` } }
           }
         }
       });
@@ -521,7 +517,7 @@ function App() {
 
       {tab === 'create' ? (
         <div>
-          {/* MOBILE CARD FORM (Active when deviceMode === 'mobile') */}
+          {/* MOBILE CARD FORM */}
           {deviceMode === 'mobile' && (
             <div className="no-print space-y-3">
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
@@ -626,24 +622,40 @@ function App() {
                   <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
                 </div>
 
-                {/* Amount Paid / Advance with 1-Click Pay Full */}
-                <div className="flex justify-between items-center py-1 pt-2">
-                  <div className="flex items-center gap-1">
-                    <span className="font-bold text-sky-800">Amount Paid (₹):</span>
-                    <button type="button" onClick={handlePayFull} className="text-[10px] bg-sky-100 border border-sky-300 text-sky-800 font-bold px-1.5 py-0.5 rounded">
-                      Pay Full
-                    </button>
+                {/* Amount Paid with ⚡ Full Pay & ⏳ Advance Toggles */}
+                <div className="py-2 border-t border-slate-200">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="font-bold text-slate-700">Payment Type:</span>
+                    <div className="flex gap-1">
+                      <button 
+                        type="button" 
+                        onClick={handlePayFull} 
+                        className={`text-xs font-bold px-2.5 py-1 rounded border transition ${pendingDue === 0 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                        ⚡ Full Pay
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={handleSetAdvance} 
+                        className={`text-xs font-bold px-2.5 py-1 rounded border transition ${pendingDue > 0 ? 'bg-sky-600 text-white border-sky-600 shadow-sm' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                        ⏳ Advance
+                      </button>
+                    </div>
                   </div>
-                  <input type="number" className="w-28 text-right bg-white border-2 border-sky-600 rounded p-1.5 font-black text-sm" value={pricing.advance} onChange={e => {
-                    const val = e.target.value === '' ? '' : Number(e.target.value);
-                    setPricing({ ...pricing, advance: val });
-                    if (val >= gstBreakdown.netPayable && gstBreakdown.netPayable > 0) setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
-                  }} />
+
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="font-bold text-sky-800">Amount Paid (₹):</span>
+                    <input 
+                      type="number" 
+                      className="w-32 text-right bg-white border-2 border-sky-600 rounded p-1.5 font-black text-sm outline-none" 
+                      value={pricing.advance} 
+                      onChange={handleAmountPaidInput} 
+                    />
+                  </div>
                 </div>
 
                 {/* Pending Balance Due */}
                 <div className={`flex justify-between items-center p-2 rounded border font-black text-sm ${pendingDue === 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-red-50 text-red-600 border-red-300'}`}>
-                  <span>{pendingDue === 0 ? 'STATUS: PAID FULL' : 'BALANCE DUE:'}</span>
+                  <span>{pendingDue === 0 ? 'STATUS: PAID FULL' : 'PENDING BALANCE DUE:'}</span>
                   <span>₹{pendingDue.toLocaleString('en-IN')}</span>
                 </div>
 
@@ -791,7 +803,7 @@ function App() {
             </button>
 
             <div className="grid grid-cols-2 gap-6 items-start mb-6">
-              {/* Warranty section updated to 3 Days */}
+              {/* 3-Day Warranty Terms */}
               <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
                 <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
                 <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
@@ -807,6 +819,15 @@ function App() {
                       <option value="12">12%</option>
                       <option value="5">5%</option>
                       <option value="0">0% (Exempt)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-0.5">Payment Status:</label>
+                    <select className="w-full bg-white border rounded p-1 text-xs font-bold text-sky-900" value={billMeta.paymentStatus} onChange={e => handleStatusChange(e.target.value)}>
+                      <option value="Advance Paid">Advance Paid (Partial Deposit)</option>
+                      <option value="Full Paid">Full Paid (Zero Balance Due)</option>
+                      <option value="Pending (Zero Advance)">Pending (Credit / Zero Advance)</option>
+                      <option value="Exchange Unit">Exchange Unit Trade-In</option>
                     </select>
                   </div>
                   <div>
@@ -855,19 +876,29 @@ function App() {
                   <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
                 </div>
                 
-                {/* Amount Paid with 1-Click Pay Full */}
+                {/* Amount Paid with ⚡ Full Pay & ⏳ Advance Toggles */}
                 <div className="flex justify-between items-center text-sky-700 font-semibold pt-1">
                   <div className="flex items-center gap-1.5">
                     <span>Amount Paid (₹):</span>
-                    <button type="button" onClick={handlePayFull} className="no-print text-[10px] bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold px-1.5 py-0.5 rounded border border-sky-300">
-                      ⚡ Pay Full
+                    <button 
+                      type="button" 
+                      onClick={handlePayFull} 
+                      className={`no-print text-[10px] font-bold px-1.5 py-0.5 rounded border transition ${pendingDue === 0 ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                      ⚡ Full Pay
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={handleSetAdvance} 
+                      className={`no-print text-[10px] font-bold px-1.5 py-0.5 rounded border transition ${pendingDue > 0 ? 'bg-sky-600 text-white border-sky-600' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                      ⏳ Advance
                     </button>
                   </div>
-                  <input type="number" className="w-28 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold text-sm" value={pricing.advance} onChange={e => {
-                    const val = e.target.value === '' ? '' : Number(e.target.value);
-                    setPricing({ ...pricing, advance: val });
-                    if (val >= gstBreakdown.netPayable && gstBreakdown.netPayable > 0) setBillMeta(prev => ({ ...prev, paymentStatus: 'Full Paid' }));
-                  }} />
+                  <input 
+                    type="number" 
+                    className="w-28 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold text-sm" 
+                    value={pricing.advance} 
+                    onChange={handleAmountPaidInput} 
+                  />
                 </div>
                 
                 <div className={`flex justify-between font-black border-t-2 pt-1.5 text-sm ${pendingDue === 0 ? 'text-emerald-600 border-emerald-500' : 'text-red-600 border-red-600'}`}>
@@ -914,7 +945,7 @@ function App() {
           )}
         </div>
       ) : (
-        /* REPORTS SECTION: VISUAL GRAPHS & MONTHLY BREAKDOWN */
+        /* REPORTS SECTION */
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap justify-between items-center gap-3">
             <div>
