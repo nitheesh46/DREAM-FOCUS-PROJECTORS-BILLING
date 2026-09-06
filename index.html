@@ -18,7 +18,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
-    @page { size: A4; margin: 6mm; }
+    @page { 
+      size: A4 portrait; 
+      margin: 4mm; 
+    }
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; padding: 0 !important; margin: 0 !important; }
@@ -27,7 +30,10 @@
         border: none !important; 
         width: 100% !important; 
         margin: 0 !important; 
+        padding: 0 !important;
         display: block !important; 
+        page-break-inside: avoid !important;
+        page-break-after: avoid !important;
       }
     }
   </style>
@@ -39,9 +45,9 @@
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
 
-// --- Vector Logos & Stamps ---
+// --- Vector Logo ---
 const ProjectorLogo = () => (
-  <svg className="w-10 h-10 flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg className="w-9 h-9 flex-shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="100" height="100" rx="20" fill="#0284C7"/>
     <rect x="15" y="38" width="55" height="30" rx="6" fill="#FFFFFF"/>
     <circle cx="35" cy="53" r="9" fill="#0F172A" stroke="#38BDF8" strokeWidth="3"/>
@@ -54,26 +60,62 @@ const ProjectorLogo = () => (
   </svg>
 );
 
+// --- Authentic Commercial Circular Inked Stamp ---
 const RubberStamp = ({ isPaid }) => (
-  <div className="w-24 h-24 rounded-full border-4 border-double border-blue-800 text-blue-900 p-2 flex flex-col items-center justify-center -rotate-12 select-none opacity-85 shadow-[0_0_0_1px_#1e40af] bg-blue-50/20">
-    <span className="text-[6.5px] font-black tracking-widest text-center leading-tight uppercase">★ DREAM FOCUS ★<br/>PROJECTORS</span>
-    <span className={`text-[9.5px] font-extrabold border-y-2 border-blue-800 my-0.5 px-2 tracking-wider uppercase ${isPaid ? 'text-emerald-700' : 'text-amber-700'}`}>
-      {isPaid ? 'PAID FULL' : 'ADVANCE RECVD'}
-    </span>
-    <span className="text-[6.5px] font-bold tracking-wider">MADURAI - 625002</span>
+  <div style={{ width: '105px', height: '105px', transform: 'rotate(-9deg)', display: 'inline-block' }}>
+    <svg viewBox="0 0 200 200" width="105" height="105" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
+      <defs>
+        <path id="stampTopPath" d="M 30,100 A 70,70 0 1,1 170,100" fill="none" />
+        <path id="stampBottomPath" d="M 170,100 A 70,70 0 0,1 30,100" fill="none" />
+      </defs>
+
+      {/* Heavy outer stamp ring */}
+      <circle cx="100" cy="100" r="94" stroke="#1e3a8a" strokeWidth="4.5" fill="none" opacity="0.9" />
+      {/* Inner decorative dashed ring */}
+      <circle cx="100" cy="100" r="84" stroke="#1e3a8a" strokeWidth="1.8" strokeDasharray="3,2" fill="none" opacity="0.85" />
+      <circle cx="100" cy="100" r="56" stroke="#1e3a8a" strokeWidth="1.5" fill="none" opacity="0.75" />
+
+      {/* Top curved text */}
+      <text fill="#1e3a8a" fontSize="13.5" fontWeight="900" letterSpacing="2.2" opacity="0.92">
+        <textPath href="#stampTopPath" startOffset="50%" textAnchor="middle">
+          ★ DREAM FOCUS PROJECTORS ★
+        </textPath>
+      </text>
+
+      {/* Bottom curved text */}
+      <text fill="#1e3a8a" fontSize="13" fontWeight="900" letterSpacing="3" opacity="0.92">
+        <textPath href="#stampBottomPath" startOffset="50%" textAnchor="middle">
+          MADURAI - 625002
+        </textPath>
+      </text>
+
+      {/* Center boxed payment verification status banner */}
+      <rect x="24" y="86" width="152" height="28" fill="#ffffff" stroke="#1e3a8a" strokeWidth="2.2" rx="3" opacity="0.95" />
+      <text 
+        x="100" 
+        y="105" 
+        fill={isPaid ? '#047857' : '#b91c1c'} 
+        fontSize="13" 
+        fontWeight="900" 
+        textAnchor="middle" 
+        letterSpacing="1.2"
+      >
+        {isPaid ? 'PAID IN FULL' : 'ADVANCE VERIFIED'}
+      </text>
+    </svg>
   </div>
 );
 
-// --- Handwritten Vector Signature (Exact Match to Uploaded Image) ---
+// --- Real Handwritten Signature ---
 const DigitalSignature = () => (
-  <div className="text-right flex flex-col items-end" style={{ minWidth: '170px' }}>
-    <span className="text-[10px] text-slate-500 font-semibold mb-0.5">Authorized Signatory</span>
-    <div style={{ width: '160px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  <div className="text-right flex flex-col items-end" style={{ minWidth: '150px' }}>
+    <span className="text-[9px] text-slate-500 font-semibold mb-0.5">Authorized Signatory</span>
+    <div style={{ width: '140px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
         viewBox="0 0 180 60" 
-        width="160" 
-        height="52" 
+        width="140" 
+        height="42" 
         style={{ display: 'block', overflow: 'visible' }}
       >
         {/* Initial 'M' stroke */}
@@ -111,14 +153,14 @@ const DigitalSignature = () => (
           strokeLinecap="round" 
           fill="none" 
         />
-        {/* Three distinct signature dots */}
+        {/* Three distinct dots */}
         <circle cx="118" cy="35" r="1.6" fill="#0f172a" />
         <circle cx="129" cy="34.5" r="1.6" fill="#0f172a" />
         <circle cx="140" cy="34" r="1.6" fill="#0f172a" />
       </svg>
     </div>
-    <div className="text-[11px] font-bold text-slate-900 border-t border-slate-900 pt-0.5 w-40 text-center">
-      M. KANAGAVEL (Proprietor)
+    <div className="text-[10px] font-bold text-slate-900 border-t border-slate-900 pt-0.5 w-36 text-center">
+      M. KANAGAVEL (Proprietor)[span_1](start_span)[span_1](end_span)
     </div>
   </div>
 );
@@ -132,7 +174,7 @@ const DEFAULT_RECORDS = [
     grossTotal: 14000, discount: 500, exchange: 0, taxableAmount: 13500, gstRate: 18, cgst: 1215, sgst: 1215, totalTax: 2430, netPayable: 15930, paid: 15930, pending: 0
   },
   {
-    invNo: "DFP/2026/1045", date: "2026-07-20", custName: "Velmurugan Arts Academy", custPhone: "9842100002", custAddr: "Sellur, Madurai",
+    invNo: "DFP/2026/1045", date: "2026-07-20", custName: "Velmurugan Arts Academy", custPhone: "9842100002", custAddr: "Sellur, Madurai",[span_2](start_span)[span_2](end_span)
     paymentStatus: "Advance Paid", paymentMode: "Bank Transfer / NEFT",
     items: [
       { id: 1, desc: "Sony 5000 Lumens Auditorium Projector", category: "Sales Unit", qty: 1, rate: 24000 },
@@ -183,14 +225,14 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_CHARTS_BILLS_V10');
+    const saved = localStorage.getItem('DFP_EXACT_A4_BILLS_V1');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
   const [analyticsYear, setAnalyticsYear] = useState('2026');
 
   useEffect(() => {
-    localStorage.setItem('DFP_CHARTS_BILLS_V10', JSON.stringify(history));
+    localStorage.setItem('DFP_EXACT_A4_BILLS_V1', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -229,7 +271,7 @@ function App() {
     return Math.max(0, gstBreakdown.netPayable - paidVal);
   }, [gstBreakdown.netPayable, pricing.advance]);
 
-  // Payment Status Handlers
+  // Payment Status Sync
   const handleStatusChange = (status) => {
     setBillMeta(prev => ({ ...prev, paymentStatus: status }));
     if (status === 'Full Paid') {
@@ -316,9 +358,9 @@ function App() {
       `--------------------------\n` +
       `*Payment Mode:* ${record.paymentMode}\n` +
       `*Testing Warranty:* 3 Days\n` +
-      `Shop Contact: +91 85085 50847\n` +
-      `No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002\n\n` +
-      `_Thank you for choosing DREAM FOCUS PROJECTORS! Attached is your verified bill._`;
+      `Shop Contact: +91 85085 50847\n` +[span_3](start_span)[span_3](end_span)
+      `No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002\n\n` +[span_4](start_span)[span_4](end_span)
+      `_Thank you for choosing DREAM FOCUS PROJECTORS! Attached is your single-page bill._`;
   };
 
   const openDirectCustomerWhatsApp = () => {
@@ -332,13 +374,14 @@ function App() {
     window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  // Reliable PDF Generator & Share
+  // --- STRICT SINGLE-PAGE A4 PDF COMPILER ---
   const sharePDFDirectly = async () => {
     const record = saveCurrentOrder();
     const cleanPhone = (billMeta.custPhone || '').replace(/\D/g, '').slice(-10);
     const invoiceElem = document.getElementById('printable-invoice');
     if (!invoiceElem) return;
 
+    // Temporary container setup for guaranteed non-blank, exact single-page rendering
     const wasHidden = invoiceElem.classList.contains('hidden');
     if (wasHidden) {
       invoiceElem.classList.remove('hidden');
@@ -346,17 +389,19 @@ function App() {
       invoiceElem.style.position = 'fixed';
       invoiceElem.style.top = '0';
       invoiceElem.style.left = '0';
-      invoiceElem.style.width = '800px';
+      invoiceElem.style.width = '780px';
       invoiceElem.style.zIndex = '99999';
       invoiceElem.style.backgroundColor = '#ffffff';
     }
 
+    // Strict single-page A4 dimensions (tighter margins prevent second page creation)
     const opt = {
-      margin: [4, 4, 4, 4],
+      margin: [3, 3, 3, 3],
       filename: `${billMeta.invNo.replace(/\//g, '_')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: 'avoid-all' }
     };
 
     try {
@@ -393,7 +438,7 @@ function App() {
         if (cleanPhone && cleanPhone.length === 10) {
           window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
         } else {
-          alert('PDF downloaded! Enter customer phone number to open direct WhatsApp chat.');
+          alert('Single-page PDF downloaded! Enter customer phone number to open direct WhatsApp chat.');
         }
       }
     } catch (err) {
@@ -403,17 +448,18 @@ function App() {
     }
   };
 
-  // Audit Modal PDF & WhatsApp Sharing
+  // Audit Modal Single Page PDF & WhatsApp Sharing
   const printOrShareAuditInvoice = async (inv, isWhatsApp = false) => {
     const element = document.getElementById('audit-modal-printable');
     if (!element) return;
 
     const opt = {
-      margin: [4, 4, 4, 4],
+      margin: [3, 3, 3, 3],
       filename: `${inv.invNo.replace(/\//g, '_')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: 'avoid-all' }
     };
 
     try {
@@ -611,7 +657,7 @@ function App() {
             <ProjectorLogo />
             <div>
               <div className="font-extrabold text-sm text-slate-800 leading-tight">DREAM FOCUS</div>
-              <div className="text-[10px] text-slate-500 font-semibold">Madurai Projector Billing & Accounts[span_0](start_span)[span_0](end_span)</div>
+              <div className="text-[10px] text-slate-500 font-semibold">Madurai Projector Billing & Accounts[span_5](start_span)[span_5](end_span)</div>
             </div>
           </div>
 
@@ -806,14 +852,14 @@ function App() {
                   💬 Direct Customer Chat
                 </button>
                 <button onClick={() => setShowPreviewModal(true)} className="bg-slate-200 text-slate-800 font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1">
-                  👁️ Preview A4 Bill
+                  👁️ Preview Single-Page Bill
                 </button>
               </div>
 
               {/* Mobile Sticky Bottom Bar */}
               <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2.5 flex gap-2 z-40 shadow-lg">
                 <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 text-white font-bold py-3 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow">
-                  📄 Share PDF to WhatsApp
+                  📄 Share 1-Page PDF
                 </button>
                 <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 text-white font-bold px-5 py-3 rounded-lg text-xs shadow">
                   🖨️ Print
@@ -822,104 +868,111 @@ function App() {
             </div>
           )}
 
-          {/* LAPTOP / PRINTABLE A4 CANVAS */}
+          {/* ========================================================================= */}
+          {/* LAPTOP / STRICT SINGLE-PAGE PRINTABLE A4 CANVAS */}
+          {/* ========================================================================= */}
           <div 
             ref={invoiceRef} 
             id="printable-invoice"
-            className={`bg-white rounded-xl shadow-md border border-slate-200 p-6 sm:p-8 ${deviceMode === 'mobile' && !showPreviewModal ? 'hidden md:block' : 'block'}`}>
+            className={`bg-white rounded-xl shadow-md border border-slate-200 p-4 sm:p-6 ${deviceMode === 'mobile' && !showPreviewModal ? 'hidden md:block' : 'block'}`}>
             
-            <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-5 rounded-lg flex justify-between items-center mb-6">
-              <div className="flex items-center gap-4">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-3.5 rounded-lg flex justify-between items-center mb-3">
+              <div className="flex items-center gap-3">
                 <ProjectorLogo />
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
-                  <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
-                  <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_1](start_span)[span_1](end_span)</p>
+                  <h1 className="text-lg sm:text-xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
+                  <p className="text-sky-300 text-[10px] font-semibold tracking-wider uppercase mt-0.5">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
+                  <p className="text-slate-300 text-[10px]">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_6](start_span)[span_6](end_span)</p>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-amber-400 font-black text-xl tracking-wider block">TAX INVOICE</span>
-                <span className={`text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide inline-block mt-1 ${pendingDue === 0 ? 'bg-emerald-500' : 'bg-amber-500'}`}>
+                <span className="text-amber-400 font-black text-lg tracking-wider block">TAX INVOICE</span>
+                <span className={`text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide inline-block mt-0.5 ${pendingDue === 0 ? 'bg-emerald-500' : 'bg-amber-500'}`}>
                   {pendingDue === 0 ? 'PAID FULL' : billMeta.paymentStatus.toUpperCase()}
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-xs">
+            {/* Customer & Invoice Meta Grid */}
+            <div className="grid grid-cols-2 gap-3 bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-3 text-[11px]">
               <div>
-                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Billed To (Customer Details)</h3>
-                <div className="space-y-1.5">
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Name:</span>
+                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[10px]">Billed To (Customer Details)</h3>
+                <div className="space-y-1">
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Name:</span>
                     <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none" placeholder="Enter Customer Name" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">WhatsApp:</span>
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">WhatsApp:</span>
                     <input className="flex-1 bg-transparent border-b border-slate-200 outline-none" placeholder="10-digit number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Address:</span>
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Address:</span>
                     <input className="flex-1 bg-transparent border-b border-slate-200 outline-none" placeholder="Madurai Area" value={billMeta.custAddr} onChange={e => setBillMeta({...billMeta, custAddr: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Buyer GSTIN:</span>
-                    <input className="flex-1 bg-transparent border-b border-slate-200 outline-none uppercase font-mono" placeholder="Optional GSTIN" value={billMeta.custGstin} onChange={e => setBillMeta({...billMeta, custGstin: e.target.value})} />
-                  </div>
+                  {billMeta.custGstin && (
+                    <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Buyer GSTIN:</span>
+                      <input className="flex-1 bg-transparent border-b border-slate-200 outline-none uppercase font-mono" value={billMeta.custGstin} onChange={e => setBillMeta({...billMeta, custGstin: e.target.value})} />
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div>
-                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Invoice Meta</h3>
-                <div className="space-y-1.5">
-                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Invoice No:</span>
+                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[10px]">Invoice Meta</h3>
+                <div className="space-y-1">
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Invoice No:</span>
                     <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none" value={billMeta.invNo} onChange={e => setBillMeta({...billMeta, invNo: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Date:</span>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Date:</span>
                     <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Proprietor:</span>
-                    <span className="font-semibold text-slate-800">M. KANAGAVEL[span_2](start_span)[span_2](end_span)</span>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Proprietor:</span>
+                    <span className="font-semibold text-slate-800">M. KANAGAVEL[span_7](start_span)[span_7](end_span)</span>
                   </div>
-                  <div className="flex items-center"><span className="w-28 text-slate-500 font-semibold">Place of Supply:</span>
-                    <span className="font-semibold text-slate-800">Tamil Nadu (33)[span_3](start_span)[span_3](end_span)</span>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Place of Supply:</span>
+                    <span className="font-semibold text-slate-800">Tamil Nadu (33)[span_8](start_span)[span_8](end_span)</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="overflow-x-auto mb-4">
-              <table className="w-full text-left border border-slate-200 text-xs">
+            {/* Compact Items Table */}
+            <div className="overflow-x-auto mb-2.5">
+              <table className="w-full text-left border border-slate-200 text-[11px]">
                 <thead>
-                  <tr className="bg-slate-900 text-white uppercase text-[11px]">
-                    <th className="p-2.5 text-center w-10">#</th>
-                    <th className="p-2.5">Item / Service Description</th>
-                    <th className="p-2.5 w-28 text-center">Category</th>
-                    <th className="p-2.5 text-center w-16">Qty</th>
-                    <th className="p-2.5 text-right w-24">Rate (₹)</th>
-                    <th className="p-2.5 text-right w-24">Total (₹)</th>
-                    <th className="p-2.5 text-center w-10 no-print"></th>
+                  <tr className="bg-slate-900 text-white uppercase text-[10px]">
+                    <th className="p-1.5 text-center w-8">#</th>
+                    <th className="p-1.5">Item / Service Description</th>
+                    <th className="p-1.5 w-24 text-center">Category</th>
+                    <th className="p-1.5 text-center w-14">Qty</th>
+                    <th className="p-1.5 text-right w-20">Rate (₹)</th>
+                    <th className="p-1.5 text-right w-20">Total (₹)</th>
+                    <th className="p-1.5 text-center w-8 no-print"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item, index) => (
                     <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="p-2 text-center font-bold text-slate-500">{index + 1}</td>
-                      <td className="p-2">
+                      <td className="p-1.5 text-center font-bold text-slate-500">{index + 1}</td>
+                      <td className="p-1.5">
                         <input className="w-full bg-transparent outline-none font-medium text-slate-800" placeholder="Model name or service" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} />
                       </td>
-                      <td className="p-2 text-center">
-                        <select className="bg-transparent border border-slate-200 rounded px-1 py-0.5 text-[11px] outline-none" value={item.category} onChange={e => updateItem(item.id, 'category', e.target.value)}>
+                      <td className="p-1.5 text-center">
+                        <select className="bg-transparent border border-slate-200 rounded px-1 py-0.5 text-[10px] outline-none" value={item.category} onChange={e => updateItem(item.id, 'category', e.target.value)}>
                           <option value="Sales Unit">Sales Unit</option>
                           <option value="Service">Service</option>
                           <option value="Accessory">Accessory</option>
                         </select>
                       </td>
-                      <td className="p-2 text-center">
+                      <td className="p-1.5 text-center">
                         <input type="number" className="w-full text-center bg-transparent outline-none font-semibold" value={item.qty} onChange={e => updateItem(item.id, 'qty', e.target.value)} />
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="p-1.5 text-right">
                         <input type="number" className="w-full text-right bg-transparent outline-none font-semibold" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.value)} />
                       </td>
-                      <td className="p-2 text-right font-bold text-slate-900">
+                      <td className="p-1.5 text-right font-bold text-slate-900">
                         ₹{((Number(item.qty) || 0) * (Number(item.rate) || 0)).toLocaleString('en-IN')}
                       </td>
-                      <td className="p-2 text-center no-print">
+                      <td className="p-1.5 text-center no-print">
                         <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700 font-bold">✕</button>
                       </td>
                     </tr>
@@ -928,21 +981,22 @@ function App() {
               </table>
             </div>
 
-            <button onClick={addItem} className="no-print bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded text-xs transition mb-6">
+            <button onClick={addItem} className="no-print bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2.5 py-1 rounded text-xs transition mb-3">
               + Add Item / Service
             </button>
 
-            <div className="grid grid-cols-2 gap-6 items-start mb-4">
-              <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
-                <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
+            {/* Calculations & Warranty Section */}
+            <div className="grid grid-cols-2 gap-4 items-start mb-2.5">
+              <div className="bg-sky-50 border-l-4 border-sky-600 p-2.5 rounded-r-md text-[11px] text-slate-700 space-y-1">
+                <h4 className="font-bold text-sky-900 uppercase tracking-wide text-[10px]">🛡️ 3-Day Testing Warranty</h4>
                 <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
-                <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing[span_4](start_span)[span_4](end_span).</p>
+                <p>• Free diagnostic checkup for future maintenance, cleaning, & bulbs[span_9](start_span)[span_9](end_span).</p>
                 <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
                 
-                <div className="pt-2 border-t border-sky-200 space-y-2 no-print">
+                <div className="pt-1.5 border-t border-sky-200 space-y-1.5 no-print">
                   <div className="flex items-center justify-between">
-                    <label className="font-bold text-slate-700">GST Slab Rate:</label>
-                    <select className="bg-white border rounded p-1 text-xs font-bold text-sky-900" value={pricing.gstRate} onChange={e => setPricing({...pricing, gstRate: Number(e.target.value)})}>
+                    <label className="font-bold text-slate-700 text-[10px]">GST Slab Rate:</label>
+                    <select className="bg-white border rounded p-1 text-[11px] font-bold text-sky-900" value={pricing.gstRate} onChange={e => setPricing({...pricing, gstRate: Number(e.target.value)})}>
                       <option value="18">18% (Standard Projectors)</option>
                       <option value="28">28%</option>
                       <option value="12">12%</option>
@@ -951,8 +1005,8 @@ function App() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-0.5">Payment Status:</label>
-                    <select className="w-full bg-white border rounded p-1 text-xs font-bold text-sky-900" value={billMeta.paymentStatus} onChange={e => handleStatusChange(e.target.value)}>
+                    <label className="block font-bold text-slate-700 mb-0.5 text-[10px]">Payment Status:</label>
+                    <select className="w-full bg-white border rounded p-1 text-[11px] font-bold text-sky-900" value={billMeta.paymentStatus} onChange={e => handleStatusChange(e.target.value)}>
                       <option value="Advance Paid">Advance Paid (Partial Deposit)</option>
                       <option value="Full Paid">Full Paid (Zero Balance Due)</option>
                       <option value="Pending (Zero Advance)">Pending (Credit / Zero Advance)</option>
@@ -960,8 +1014,8 @@ function App() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-0.5">Payment Method:</label>
-                    <select className="w-full bg-white border rounded p-1 text-xs font-bold text-sky-900" value={billMeta.paymentMode} onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
+                    <label className="block font-bold text-slate-700 mb-0.5 text-[10px]">Payment Method:</label>
+                    <select className="w-full bg-white border rounded p-1 text-[11px] font-bold text-sky-900" value={billMeta.paymentMode} onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
                       <option value="GPay / PhonePe UPI">📱 GPay / PhonePe / UPI</option>
                       <option value="Cash">💵 Cash</option>
                       <option value="Bank Transfer / NEFT">🏦 Bank Transfer / NEFT</option>
@@ -971,25 +1025,25 @@ function App() {
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200 text-xs space-y-2 font-medium">
+              <div className="bg-slate-50 p-2.5 rounded-md border border-slate-200 text-[11px] space-y-1 font-medium">
                 <div className="flex justify-between text-slate-600">
                   <span>Gross Order Value:</span>
                   <span>₹{grossTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">Festival Discount (₹):</span>
-                  <input type="number" className="w-24 text-right bg-white border rounded px-1.5 py-0.5" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
+                  <input type="number" className="w-20 text-right bg-white border rounded px-1.5 py-0.5 text-[11px]" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">Old Projector Exchange (₹):</span>
-                  <input type="number" className="w-24 text-right bg-white border rounded px-1.5 py-0.5" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
+                  <input type="number" className="w-20 text-right bg-white border rounded px-1.5 py-0.5 text-[11px]" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
                 </div>
-                <div className="flex justify-between text-slate-900 font-bold border-t pt-1.5">
+                <div className="flex justify-between text-slate-900 font-bold border-t pt-1">
                   <span>Taxable Value:</span>
                   <span>₹{taxableAmount.toLocaleString('en-IN')}</span>
                 </div>
                 {pricing.gstRate > 0 && (
-                  <div className="bg-sky-50/70 p-2 rounded border border-sky-100 space-y-1 text-slate-700">
+                  <div className="bg-sky-50/70 p-1.5 rounded border border-sky-100 space-y-0.5 text-slate-700 text-[10px]">
                     <div className="flex justify-between">
                       <span>CGST ({pricing.gstRate / 2}%):</span>
                       <span>₹{gstBreakdown.cgst.toFixed(2)}</span>
@@ -1000,70 +1054,70 @@ function App() {
                     </div>
                   </div>
                 )}
-                <div className="flex justify-between text-slate-900 font-black border-t-2 pt-1 text-base">
+                <div className="flex justify-between text-slate-900 font-black border-t-2 pt-1 text-sm">
                   <span>Net Grand Total:</span>
                   <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
                 </div>
                 
                 {/* Amount Paid with Full Pay & Advance Buttons */}
-                <div className="flex justify-between items-center text-sky-700 font-semibold pt-1">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex justify-between items-center text-sky-700 font-semibold pt-0.5">
+                  <div className="flex items-center gap-1">
                     <span>Amount Paid (₹):</span>
                     <button 
                       type="button" 
                       onClick={handlePayFull} 
-                      className={`no-print text-[10px] font-bold px-1.5 py-0.5 rounded border transition ${pendingDue === 0 ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                      className={`no-print text-[9px] font-bold px-1.5 py-0.5 rounded border transition ${pendingDue === 0 ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
                       ⚡ Full Pay
                     </button>
                     <button 
                       type="button" 
                       onClick={handleSetAdvance} 
-                      className={`no-print text-[10px] font-bold px-1.5 py-0.5 rounded border transition ${pendingDue > 0 ? 'bg-sky-600 text-white border-sky-600' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                      className={`no-print text-[9px] font-bold px-1.5 py-0.5 rounded border transition ${pendingDue > 0 ? 'bg-sky-600 text-white border-sky-600' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
                       ⏳ Advance
                     </button>
                   </div>
                   <input 
                     type="number" 
-                    className="w-28 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold text-sm" 
+                    className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold text-xs" 
                     value={pricing.advance} 
                     onChange={handleAmountPaidInput} 
                   />
                 </div>
                 
-                <div className={`flex justify-between font-black border-t-2 pt-1.5 text-sm ${pendingDue === 0 ? 'text-emerald-600 border-emerald-500' : 'text-red-600 border-red-600'}`}>
+                <div className={`flex justify-between font-black border-t pt-1 text-xs ${pendingDue === 0 ? 'text-emerald-600 border-emerald-500' : 'text-red-600 border-red-600'}`}>
                   <span>{pendingDue === 0 ? 'STATUS: PAID IN FULL' : 'PENDING BALANCE DUE:'}</span>
                   <span>₹{pendingDue.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
 
-            {/* Added Customer Thank-You Note Section */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center mb-4">
-              <div className="text-xs font-bold text-slate-800">
-                ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_5](start_span)[span_5](end_span)!
+            {/* Customer Thank-You Note Banner */}
+            <div className="bg-slate-50 border border-slate-200 rounded p-1.5 text-center mb-2.5">
+              <div className="text-[11px] font-bold text-slate-800">
+                ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_10](start_span)[span_10](end_span)!
               </div>
-              <div className="text-[10px] text-slate-500 mt-0.5">
-                We appreciate your business & trust. For queries, replacement lamps, or service bookings, contact: <strong>+91 85085 50847</strong>[span_6](start_span)[span_6](end_span)
+              <div className="text-[9.5px] text-slate-500">
+                We appreciate your business & trust. For queries, replacement lamps, or service bookings, contact: <strong>+91 85085 50847</strong>[span_11](start_span)[span_11](end_span)
               </div>
             </div>
 
-            {/* Footer with Stamp & Signature */}
-            <div className="flex justify-between items-end border-t border-slate-300 pt-3">
-              <div className="text-[11px] text-slate-500">
-                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_7](start_span)[span_7](end_span)</p>
-                <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_8](start_span)[span_8](end_span)</p>
-                <p className="mt-0.5">Payment Method: <strong className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
+            {/* Footer with Inked Stamp & Signature */}
+            <div className="flex justify-between items-end border-t border-slate-300 pt-2">
+              <div className="text-[10px] text-slate-500">
+                <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_12](start_span)[span_12](end_span)</p>
+                <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_13](start_span)[span_13](end_span)</p>
+                <p className="mt-0.5">Payment Mode: <strong className="text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
               </div>
 
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 <RubberStamp isPaid={pendingDue === 0} />
                 <DigitalSignature />
               </div>
             </div>
 
             {deviceMode === 'mobile' && showPreviewModal && (
-              <div className="mt-6 text-center no-print">
-                <button onClick={() => setShowPreviewModal(false)} className="bg-slate-800 text-white font-bold py-2.5 px-6 rounded-lg text-xs">
+              <div className="mt-4 text-center no-print">
+                <button onClick={() => setShowPreviewModal(false)} className="bg-slate-800 text-white font-bold py-2 px-5 rounded-lg text-xs">
                   ✕ Close Preview
                 </button>
               </div>
@@ -1071,17 +1125,17 @@ function App() {
           </div>
 
           {deviceMode === 'laptop' && (
-            <div className="mt-5 flex flex-wrap gap-3 no-print">
-              <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-lg shadow transition flex items-center justify-center gap-1.5">
+            <div className="mt-4 flex flex-wrap gap-2.5 no-print">
+              <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-1.5 text-xs">
                 💬 Direct Customer WhatsApp
               </button>
-              <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-4 rounded-lg shadow transition flex items-center justify-center gap-2">
-                📄 Share GST PDF Bill to WhatsApp
+              <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-2 text-xs">
+                📄 Share 1-Page PDF to WhatsApp
               </button>
-              <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-5 rounded-lg shadow transition">
+              <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-lg shadow transition text-xs">
                 💾 Save & Print
               </button>
-              <button onClick={resetForm} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-lg transition">
+              <button onClick={resetForm} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2.5 px-3 rounded-lg transition text-xs">
                 🔄 New Bill
               </button>
             </div>
@@ -1217,7 +1271,7 @@ function App() {
                     <button 
                       onClick={() => {
                         const cleanPhone = (c.custPhone || '').replace(/\D/g, '').slice(-10);
-                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you[span_9](start_span)[span_9](end_span)!`;
+                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you[span_14](start_span)[span_14](end_span)!`;
                         window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
                       }}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] flex items-center gap-1">
@@ -1233,7 +1287,7 @@ function App() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-bold text-slate-900 text-xs sm:text-sm">📋 Complete Invoice Audit Ledger</h3>
-              <span className="text-[11px] text-slate-500 font-medium">Click <strong>👁️ PDF View</strong> to open full tax bill</span>
+              <span className="text-[11px] text-slate-500 font-medium">Click <strong>👁️ PDF View</strong> to open 1-page bill</span>
             </div>
             
             <div className="overflow-x-auto">
@@ -1298,15 +1352,15 @@ function App() {
         </div>
       )}
 
-      {/* CUSTOMER INVOICE PDF VIEW MODAL */}
+      {/* CUSTOMER INVOICE PDF VIEW MODAL (FROM AUDIT TABLE) */}
       {auditPreviewInvoice && (
         <div className="fixed inset-0 bg-slate-900/75 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto no-print">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl p-4 sm:p-6 my-auto max-h-[95vh] overflow-y-auto">
+          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl p-4 my-auto max-h-[95vh] overflow-y-auto">
             
-            <div className="flex justify-between items-center border-b pb-3 mb-4">
+            <div className="flex justify-between items-center border-b pb-2 mb-3">
               <div>
-                <h3 className="font-black text-slate-900 text-base sm:text-lg">Customer Tax Invoice: {auditPreviewInvoice.invNo}</h3>
-                <p className="text-xs text-slate-500">Customer: <strong>{auditPreviewInvoice.custName || 'Walk-in'}</strong> | WhatsApp: {auditPreviewInvoice.custPhone || 'N/A'}</p>
+                <h3 className="font-black text-slate-900 text-sm sm:text-base">Customer Tax Invoice: {auditPreviewInvoice.invNo}</h3>
+                <p className="text-[11px] text-slate-500">Customer: <strong>{auditPreviewInvoice.custName || 'Walk-in'}</strong> | WhatsApp: {auditPreviewInvoice.custPhone || 'N/A'}</p>
               </div>
               <button 
                 onClick={() => setAuditPreviewInvoice(null)} 
@@ -1316,93 +1370,93 @@ function App() {
             </div>
 
             {/* A4 Modal Capture Target */}
-            <div id="audit-modal-printable" className="bg-white border border-slate-200 rounded-xl p-4 sm:p-8">
-              <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-5 rounded-lg flex justify-between items-center mb-6">
-                <div className="flex items-center gap-4">
+            <div id="audit-modal-printable" className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-5">
+              <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-3.5 rounded-lg flex justify-between items-center mb-3">
+                <div className="flex items-center gap-3">
                   <ProjectorLogo />
                   <div>
-                    <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
-                    <p className="text-sky-300 text-xs font-semibold tracking-wider uppercase mt-1">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
-                    <p className="text-slate-300 text-[11px] mt-0.5">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_10](start_span)[span_10](end_span)</p>
+                    <h1 className="text-lg font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
+                    <p className="text-sky-300 text-[10px] font-semibold tracking-wider uppercase mt-0.5">Pre-Owned Sales • Chip-Level Repair • Projector Accessories</p>
+                    <p className="text-slate-300 text-[10px]">Madurai Branch • Phone / WhatsApp: +91 85085 50847[span_15](start_span)[span_15](end_span)</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-amber-400 font-black text-xl tracking-wider block">TAX INVOICE</span>
-                  <span className={`text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide inline-block mt-1 ${(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'bg-emerald-500' : 'bg-amber-500'}`}>
+                  <span className="text-amber-400 font-black text-base tracking-wider block">TAX INVOICE</span>
+                  <span className={`text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide inline-block mt-0.5 ${(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'bg-emerald-500' : 'bg-amber-500'}`}>
                     {(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'PAID FULL' : auditPreviewInvoice.paymentStatus.toUpperCase()}
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-3 text-[11px]">
                 <div>
-                  <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Billed To (Customer Details)</h3>
-                  <div className="space-y-1">
+                  <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[10px]">Billed To (Customer Details)</h3>
+                  <div className="space-y-0.5">
                     <div><span className="text-slate-500 font-semibold">Name:</span> <strong className="text-slate-900">{auditPreviewInvoice.custName || 'Walk-in'}</strong></div>
                     <div><span className="text-slate-500 font-semibold">WhatsApp:</span> {auditPreviewInvoice.custPhone || 'N/A'}</div>
-                    <div><span className="text-slate-500 font-semibold">Address:</span> {auditPreviewInvoice.custAddr || 'Madurai'}[span_11](start_span)[span_11](end_span)</div>
+                    <div><span className="text-slate-500 font-semibold">Address:</span> {auditPreviewInvoice.custAddr || 'Madurai'}[span_16](start_span)[span_16](end_span)</div>
                     {auditPreviewInvoice.custGstin && <div><span className="text-slate-500 font-semibold">Buyer GSTIN:</span> {auditPreviewInvoice.custGstin}</div>}
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-1 mb-2">Invoice Meta</h3>
-                  <div className="space-y-1">
+                  <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[10px]">Invoice Meta</h3>
+                  <div className="space-y-0.5">
                     <div><span className="text-slate-500 font-semibold">Invoice No:</span> <strong className="text-slate-900">{auditPreviewInvoice.invNo}</strong></div>
                     <div><span className="text-slate-500 font-semibold">Date:</span> {auditPreviewInvoice.date}</div>
-                    <div><span className="text-slate-500 font-semibold">Proprietor:</span> M. KANAGAVEL[span_12](start_span)[span_12](end_span)</div>
-                    <div><span className="text-slate-500 font-semibold">Place of Supply:</span> Tamil Nadu (33)[span_13](start_span)[span_13](end_span)</div>
+                    <div><span className="text-slate-500 font-semibold">Proprietor:</span> M. KANAGAVEL[span_17](start_span)[span_17](end_span)</div>
+                    <div><span className="text-slate-500 font-semibold">Place of Supply:</span> Tamil Nadu (33)[span_18](start_span)[span_18](end_span)</div>
                   </div>
                 </div>
               </div>
 
-              <table className="w-full text-left border border-slate-200 text-xs mb-4">
+              <table className="w-full text-left border border-slate-200 text-[11px] mb-2.5">
                 <thead>
-                  <tr className="bg-slate-900 text-white uppercase text-[11px]">
-                    <th className="p-2 text-center w-10">#</th>
-                    <th className="p-2">Item Description</th>
-                    <th className="p-2 text-center w-24">Category</th>
-                    <th className="p-2 text-center w-16">Qty</th>
-                    <th className="p-2 text-right w-24">Rate (₹)</th>
-                    <th className="p-2 text-right w-24">Total (₹)</th>
+                  <tr className="bg-slate-900 text-white uppercase text-[10px]">
+                    <th className="p-1.5 text-center w-8">#</th>
+                    <th className="p-1.5">Item Description</th>
+                    <th className="p-1.5 text-center w-24">Category</th>
+                    <th className="p-1.5 text-center w-14">Qty</th>
+                    <th className="p-1.5 text-right w-20">Rate (₹)</th>
+                    <th className="p-1.5 text-right w-20">Total (₹)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {(auditPreviewInvoice.items || []).map((it, idx) => (
                     <tr key={it.id || idx}>
-                      <td className="p-2 text-center font-bold text-slate-500">{idx + 1}</td>
-                      <td className="p-2 font-medium text-slate-800">{it.desc}</td>
-                      <td className="p-2 text-center text-slate-600">{it.category}</td>
-                      <td className="p-2 text-center font-bold">{it.qty}</td>
-                      <td className="p-2 text-right font-semibold">₹{Number(it.rate).toLocaleString('en-IN')}</td>
-                      <td className="p-2 text-right font-bold text-slate-900">₹{((Number(it.qty) || 1) * (Number(it.rate) || 0)).toLocaleString('en-IN')}</td>
+                      <td className="p-1.5 text-center font-bold text-slate-500">{idx + 1}</td>
+                      <td className="p-1.5 font-medium text-slate-800">{it.desc}</td>
+                      <td className="p-1.5 text-center text-slate-600">{it.category}</td>
+                      <td className="p-1.5 text-center font-bold">{it.qty}</td>
+                      <td className="p-1.5 text-right font-semibold">₹{Number(it.rate).toLocaleString('en-IN')}</td>
+                      <td className="p-1.5 text-right font-bold text-slate-900">₹{((Number(it.qty) || 1) * (Number(it.rate) || 0)).toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              <div className="grid grid-cols-2 gap-6 items-start mb-4">
-                <div className="bg-sky-50 border-l-4 border-sky-600 p-3.5 rounded-r-md text-xs text-slate-700 space-y-2">
-                  <h4 className="font-bold text-sky-900 uppercase tracking-wide">🛡️ 3-Day Testing Warranty</h4>
+              <div className="grid grid-cols-2 gap-4 items-start mb-2.5">
+                <div className="bg-sky-50 border-l-4 border-sky-600 p-2.5 rounded-r-md text-[11px] text-slate-700 space-y-1">
+                  <h4 className="font-bold text-sky-900 uppercase tracking-wide text-[10px]">🛡️ 3-Day Testing Warranty</h4>
                   <p>• 3-day testing warranty covers lamp performance and optical engine clarity.</p>
-                  <p>• Free diagnostic testing for future maintenance, filters, and bulb servicing[span_14](start_span)[span_14](end_span).</p>
+                  <p>• Free diagnostic checkup for future maintenance, cleaning, & bulbs[span_19](start_span)[span_19](end_span).</p>
                   <p className="text-slate-500">• Note: Power ballast burn and physical water damage are excluded.</p>
-                  <div className="pt-2 text-slate-600 font-semibold border-t border-sky-200">
+                  <div className="pt-1 text-slate-600 font-semibold border-t border-sky-200">
                     Payment Method: <strong className="text-slate-900">{auditPreviewInvoice.paymentMode}</strong>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-3.5 rounded-md border border-slate-200 text-xs space-y-1.5 font-medium">
+                <div className="bg-slate-50 p-2.5 rounded-md border border-slate-200 text-[11px] space-y-1 font-medium">
                   <div className="flex justify-between text-slate-600">
                     <span>Taxable Value:</span>
                     <span>₹{(auditPreviewInvoice.taxableAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
                   {(Number(auditPreviewInvoice.gstRate) || 0) > 0 && (
-                    <div className="flex justify-between text-purple-700">
+                    <div className="flex justify-between text-purple-700 text-[10px]">
                       <span>Total GST Tax ({auditPreviewInvoice.gstRate}%):</span>
                       <span>₹{(auditPreviewInvoice.totalTax || 0).toLocaleString('en-IN')}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-900 font-black border-t pt-1 text-sm">
+                  <div className="flex justify-between text-slate-900 font-black border-t pt-1 text-xs">
                     <span>Net Total:</span>
                     <span>₹{(auditPreviewInvoice.netPayable || 0).toLocaleString('en-IN')}</span>
                   </div>
@@ -1410,7 +1464,7 @@ function App() {
                     <span>Amount Paid:</span>
                     <span>₹{(Number(auditPreviewInvoice.paid) || 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <div className={`flex justify-between font-black border-t pt-1 text-sm ${(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <div className={`flex justify-between font-black border-t pt-1 text-xs ${(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                     <span>{(Number(auditPreviewInvoice.pending) || 0) === 0 ? 'PAID IN FULL' : 'PENDING BALANCE:'}</span>
                     <span>₹{(Number(auditPreviewInvoice.pending) || 0).toLocaleString('en-IN')}</span>
                   </div>
@@ -1418,41 +1472,41 @@ function App() {
               </div>
 
               {/* Thank-You Section inside Modal */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center mb-4">
-                <div className="text-xs font-bold text-slate-800">
-                  ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_15](start_span)[span_15](end_span)!
+              <div className="bg-slate-50 border border-slate-200 rounded p-1.5 text-center mb-2.5">
+                <div className="text-[11px] font-bold text-slate-800">
+                  ✨ Thank you for choosing DREAM FOCUS PROJECTORS[span_20](start_span)[span_20](end_span)!
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">
-                  We appreciate your business & trust. For queries, replacement lamps, or service bookings, contact: <strong>+91 85085 50847</strong>[span_16](start_span)[span_16](end_span)
+                <div className="text-[9.5px] text-slate-500">
+                  We appreciate your business & trust. For queries, replacement lamps, or service bookings, contact: <strong>+91 85085 50847</strong>[span_21](start_span)[span_21](end_span)
                 </div>
               </div>
 
-              <div className="flex justify-between items-end border-t border-slate-300 pt-3">
-                <div className="text-[11px] text-slate-500">
-                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_17](start_span)[span_17](end_span)</p>
-                  <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_18](start_span)[span_18](end_span)</p>
+              <div className="flex justify-between items-end border-t border-slate-300 pt-2">
+                <div className="text-[10px] text-slate-500">
+                  <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS[span_22](start_span)[span_22](end_span)</p>
+                  <p>No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002[span_23](start_span)[span_23](end_span)</p>
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4">
                   <RubberStamp isPaid={(Number(auditPreviewInvoice.pending) || 0) === 0} />
                   <DigitalSignature />
                 </div>
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2 justify-end">
+            <div className="mt-3 flex flex-wrap gap-2 justify-end">
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow">
-                💬 Share PDF to Customer WhatsApp
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
+                💬 Share 1-Page PDF to WhatsApp
               </button>
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, false)}
-                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-1.5 shadow">
-                🖨️ Download / Print PDF
+                className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
+                🖨️ Download / Print
               </button>
               <button 
                 onClick={() => setAuditPreviewInvoice(null)}
-                className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-2 rounded-lg text-xs">
+                className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs">
                 ✕ Close
               </button>
             </div>
