@@ -129,12 +129,6 @@ const DEFAULT_RECORDS = [
       { id: 2, desc: "Optical Prism Alignment & Deep Clean", category: "Service", qty: 1, rate: 1800 }
     ],
     grossTotal: 25800, discount: 800, exchange: 2000, taxableAmount: 23000, gstRate: 18, cgst: 2070, sgst: 2070, totalTax: 4140, netPayable: 27140, paid: 15000, pending: 12140
-  },
-  {
-    invNo: "DFP/2026/1082", date: "2026-08-05", custName: "Rajesh Kannan", custPhone: "9842100003", custAddr: "Anna Nagar, Madurai",
-    paymentStatus: "Full Paid", paymentMode: "Cash",
-    items: [{ id: 1, desc: "Chip-Level Ballast Board Repair", category: "Service", qty: 1, rate: 3500 }],
-    grossTotal: 3500, discount: 0, exchange: 0, taxableAmount: 3500, gstRate: 18, cgst: 315, sgst: 315, totalTax: 630, netPayable: 4130, paid: 4130, pending: 0
   }
 ];
 
@@ -166,6 +160,7 @@ function App() {
 
   const [tab, setTab] = useState('create');
   const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null);
+  const [saveToast, setSaveToast] = useState(null); // Visual Confirmation Alert
   const invoiceRef = useRef(null);
 
   // Security PIN State
@@ -210,7 +205,7 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_DESKTOP_ALWAYS_BILLS');
+    const saved = localStorage.getItem('DFP_PERFECT_AUDIT_DB');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
@@ -218,7 +213,7 @@ function App() {
   const [analyticsMonth, setAnalyticsMonth] = useState('ALL');
 
   useEffect(() => {
-    localStorage.setItem('DFP_DESKTOP_ALWAYS_BILLS', JSON.stringify(history));
+    localStorage.setItem('DFP_PERFECT_AUDIT_DB', JSON.stringify(history));
   }, [history]);
 
   const handleLoginSubmit = (e) => {
@@ -310,7 +305,8 @@ function App() {
   const removeItem = (id) => setItems(items.filter(i => i.id !== id));
   const updateItem = (id, field, val) => setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
 
-  const saveCurrentOrder = () => {
+  // Save Order Record with Visual Confirmation Toast
+  const saveCurrentOrder = (showToastNotice = true) => {
     const record = {
       ...billMeta,
       items,
@@ -327,10 +323,21 @@ function App() {
       pending: pendingDue,
       timestamp: Date.now()
     };
+
     setHistory(prev => {
       const idx = prev.findIndex(p => p.invNo === billMeta.invNo);
       return idx >= 0 ? prev.map((p, i) => i === idx ? record : p) : [record, ...prev];
     });
+
+    if (showToastNotice) {
+      setSaveToast({
+        invNo: record.invNo,
+        custName: record.custName || 'Walk-in Customer',
+        amount: record.netPayable
+      });
+      setTimeout(() => setSaveToast(null), 4000);
+    }
+
     return record;
   };
 
@@ -385,21 +392,35 @@ function App() {
       `_Thank you for choosing DREAM FOCUS PROJECTORS! Attached is your bill._`;
   };
 
-  const openDirectCustomerWhatsApp = () => {
-    const record = saveCurrentOrder();
-    const cleanPhone = (billMeta.custPhone || '').replace(/\D/g, '').slice(-10);
+  // --- POPUP-BLOCKER-SAFE DIRECT WHATSAPP DISPATCHER ---
+  const launchWhatsAppDirect = (phone, text) => {
+    const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
     if (!cleanPhone || cleanPhone.length < 10) {
       alert("Please enter a valid 10-digit WhatsApp phone number for the customer!");
       return;
     }
+
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone}&text=${encodeURIComponent(text)}`;
+    
+    // Synthetic link element bypasses pop-up blockers in Chrome/Safari/Brave
+    const a = document.createElement('a');
+    a.href = whatsappUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const openDirectCustomerWhatsApp = () => {
+    const record = saveCurrentOrder(true);
     const text = buildWhatsAppText(record);
-    window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+    launchWhatsAppDirect(record.custPhone, text);
   };
 
   // Strictly 1-Page PDF Generator
   const sharePDFDirectly = async () => {
-    const record = saveCurrentOrder();
-    const cleanPhone = (billMeta.custPhone || '').replace(/\D/g, '').slice(-10);
+    const record = saveCurrentOrder(true);
     const invoiceElem = document.getElementById('printable-invoice');
     if (!invoiceElem) return;
 
@@ -431,11 +452,8 @@ function App() {
         a.click();
         URL.revokeObjectURL(url);
 
-        if (cleanPhone && cleanPhone.length === 10) {
-          window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
-        } else {
-          alert('1-Page PDF downloaded! Enter customer phone number to open direct WhatsApp chat.');
-        }
+        // Directly open WhatsApp after download
+        launchWhatsAppDirect(record.custPhone, waMessage);
       }
     } catch (err) {
       console.error(err);
@@ -457,31 +475,10 @@ function App() {
     };
 
     try {
-      const cleanPhone = (inv.custPhone || '').replace(/\D/g, '').slice(-10);
       const waText = buildWhatsAppText(inv);
 
       if (isWhatsApp) {
-        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-        const pdfFile = new File([pdfBlob], `${inv.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
-
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          await navigator.share({
-            files: [pdfFile],
-            title: `Invoice ${inv.invNo}`,
-            text: waText
-          });
-        } else {
-          const url = URL.createObjectURL(pdfBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${inv.invNo.replace(/\//g, '_')}.pdf`;
-          a.click();
-          URL.revokeObjectURL(url);
-
-          if (cleanPhone && cleanPhone.length === 10) {
-            window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(waText)}`, '_blank');
-          }
-        }
+        launchWhatsAppDirect(inv.custPhone, waText);
       } else {
         html2pdf().set(opt).from(element).save();
       }
@@ -738,6 +735,18 @@ function App() {
   return (
     <div className="desktop-canvas max-w-5xl mx-auto px-4 pt-3">
       
+      {/* Visual Save Confirmation Toast Alert */}
+      {saveToast && (
+        <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-emerald-500 animate-bounce">
+          <span className="text-xl">✅</span>
+          <div>
+            <div className="text-xs uppercase tracking-wider">Bill Saved Successfully!</div>
+            <div className="text-sm font-black">{saveToast.invNo} • {saveToast.custName} (₹{saveToast.amount.toLocaleString('en-IN')})</div>
+          </div>
+          <button onClick={() => setSaveToast(null)} className="text-white hover:text-slate-200 font-bold ml-2">✕</button>
+        </div>
+      )}
+
       {/* Top Header Navigation */}
       <div className="no-print space-y-2 mb-3">
         <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
@@ -745,11 +754,19 @@ function App() {
             <ProjectorLogo />
             <div>
               <div className="font-extrabold text-sm text-slate-800 leading-tight">DREAM FOCUS</div>
-              <div className="text-[10px] text-slate-500 font-semibold">User: <strong className="text-sky-700">{loginUser || 'Nitheesh'}</strong></div>
+              <div className="text-[10px] text-slate-500 font-semibold">
+                User: <strong className="text-sky-700">{loginUser || 'Nitheesh'}</strong> | Total Bills in Ledger: <strong className="text-emerald-700 font-bold">{history.length}</strong>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => saveCurrentOrder(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"
+              title="Save current invoice into database">
+              💾 Save Bill
+            </button>
             <button
               onClick={handleLogout}
               className="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-200 transition flex items-center gap-1"
@@ -769,14 +786,14 @@ function App() {
           <button 
             onClick={() => setTab('reports')}
             className={`flex-1 py-2.5 font-bold rounded-lg text-xs sm:text-sm transition shadow-sm ${tab === 'reports' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'}`}>
-            📊 Reports & Analytics
+            📊 Reports & Analytics ({history.length} Bills)
           </button>
         </div>
       </div>
 
       {tab === 'create' ? (
         <div>
-          {/* ALWAYS DISPLAY STRICT SINGLE-PAGE DESKTOP INVOICE */}
+          {/* STRICT SINGLE-PAGE DESKTOP INVOICE */}
           <div 
             ref={invoiceRef} 
             id="printable-invoice"
@@ -809,7 +826,7 @@ function App() {
                     <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" placeholder="Customer Name" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
                   </div>
                   <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Phone:</span>
-                    <input className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" placeholder="Phone number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
+                    <input className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" placeholder="10-digit number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
                   </div>
                   <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Address:</span>
                     <input className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" placeholder="Address" value={billMeta.custAddr} onChange={e => setBillMeta({...billMeta, custAddr: e.target.value})} />
@@ -1021,7 +1038,7 @@ function App() {
             </div>
           </div>
 
-          {/* Action Buttons Always in Desktop Toolbar Format */}
+          {/* Desktop Control Bar */}
           <div className="mt-3.5 flex flex-wrap gap-2.5 no-print">
             <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-1.5 text-xs">
               💬 Direct Customer WhatsApp
@@ -1029,7 +1046,7 @@ function App() {
             <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-2 text-xs">
               📄 Share 1-Page PDF to WhatsApp
             </button>
-            <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-lg shadow transition text-xs">
+            <button onClick={() => { saveCurrentOrder(true); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-lg shadow transition text-xs">
               💾 Save & Print
             </button>
             <button onClick={resetForm} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2.5 px-3.5 rounded-lg transition text-xs">
@@ -1196,9 +1213,8 @@ function App() {
                     </div>
                     <button 
                       onClick={() => {
-                        const cleanPhone = (c.custPhone || '').replace(/\D/g, '').slice(-10);
                         const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you!`;
-                        window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                        launchWhatsAppDirect(c.custPhone, msg);
                       }}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] flex items-center gap-1">
                       💬 WhatsApp Reminder
@@ -1499,7 +1515,7 @@ function App() {
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded text-xs flex items-center gap-1 shadow">
-                💬 Share 1-Page PDF
+                💬 Direct Customer WhatsApp
               </button>
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, false)}
