@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=1024, initial-scale=1.0" />
   <title>DREAM FOCUS PROJECTORS - Billing & Reports</title>
   
   <!-- Tailwind CSS CDN -->
@@ -37,9 +37,12 @@
         page-break-after: avoid !important;
       }
     }
+    .desktop-canvas {
+      min-width: 820px;
+    }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen pb-28 md:pb-12">
+<body class="bg-slate-100 text-slate-900 min-h-screen pb-12 overflow-x-auto">
 
 <div id="root"></div>
 
@@ -126,10 +129,15 @@ const DEFAULT_RECORDS = [
       { id: 2, desc: "Optical Prism Alignment & Deep Clean", category: "Service", qty: 1, rate: 1800 }
     ],
     grossTotal: 25800, discount: 800, exchange: 2000, taxableAmount: 23000, gstRate: 18, cgst: 2070, sgst: 2070, totalTax: 4140, netPayable: 27140, paid: 15000, pending: 12140
+  },
+  {
+    invNo: "DFP/2026/1082", date: "2026-08-05", custName: "Rajesh Kannan", custPhone: "9842100003", custAddr: "Anna Nagar, Madurai",
+    paymentStatus: "Full Paid", paymentMode: "Cash",
+    items: [{ id: 1, desc: "Chip-Level Ballast Board Repair", category: "Service", qty: 1, rate: 3500 }],
+    grossTotal: 3500, discount: 0, exchange: 0, taxableAmount: 3500, gstRate: 18, cgst: 315, sgst: 315, totalTax: 630, netPayable: 4130, paid: 4130, pending: 0
   }
 ];
 
-// Helper to encode and decode hidden credentials
 const encodeHiddenCreds = (u, p) => btoa(encodeURIComponent(`${u}:::${p}`));
 const decodeHiddenCreds = (str) => {
   try {
@@ -141,7 +149,6 @@ const decodeHiddenCreds = (str) => {
 };
 
 function App() {
-  // Authentication & Hidden Credential Storage
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('DFP_USER_SESSION') === 'true';
   });
@@ -158,12 +165,10 @@ function App() {
   const [loginError, setLoginError] = useState('');
 
   const [tab, setTab] = useState('create');
-  const [deviceMode, setDeviceMode] = useState(() => window.innerWidth < 768 ? 'mobile' : 'laptop');
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null);
   const invoiceRef = useRef(null);
 
-  // Security PIN State for Record Deletion
+  // Security PIN State
   const [adminPin, setAdminPin] = useState(() => localStorage.getItem('DFP_SECURITY_PIN') || '8508');
   const [deleteTargetInv, setDeleteTargetInv] = useState(null);
   const [inputPin, setInputPin] = useState('');
@@ -205,7 +210,7 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_CLEAN_SECURE_BILLS_V4');
+    const saved = localStorage.getItem('DFP_DESKTOP_ALWAYS_BILLS');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
@@ -213,25 +218,9 @@ function App() {
   const [analyticsMonth, setAnalyticsMonth] = useState('ALL');
 
   useEffect(() => {
-    localStorage.setItem('DFP_CLEAN_SECURE_BILLS_V4', JSON.stringify(history));
+    localStorage.setItem('DFP_DESKTOP_ALWAYS_BILLS', JSON.stringify(history));
   }, [history]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (!localStorage.getItem('DFP_USER_MODE_PREF')) {
-        setDeviceMode(window.innerWidth < 768 ? 'mobile' : 'laptop');
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const toggleDeviceMode = (mode) => {
-    setDeviceMode(mode);
-    localStorage.setItem('DFP_USER_MODE_PREF', mode);
-  };
-
-  // Login Submit with Hidden Format Persistence
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     if (loginUser.trim() === 'Nitheesh' && loginPass === 'Dreamfocusprojector2026') {
@@ -244,7 +233,7 @@ function App() {
       }
       setLoginError('');
     } else {
-      setLoginError('❌ Invalid Username or Password. Please try again.');
+      setLoginError('❌ Invalid Username or Password.');
     }
   };
 
@@ -321,7 +310,6 @@ function App() {
   const removeItem = (id) => setItems(items.filter(i => i.id !== id));
   const updateItem = (id, field, val) => setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
 
-  // Save Current Record
   const saveCurrentOrder = () => {
     const record = {
       ...billMeta,
@@ -346,7 +334,6 @@ function App() {
     return record;
   };
 
-  // Password Protected Deletion Handlers
   const handleRequestDelete = (invNo) => {
     setDeleteTargetInv(invNo);
     setInputPin('');
@@ -416,18 +403,6 @@ function App() {
     const invoiceElem = document.getElementById('printable-invoice');
     if (!invoiceElem) return;
 
-    const wasHidden = invoiceElem.classList.contains('hidden');
-    if (wasHidden) {
-      invoiceElem.classList.remove('hidden');
-      invoiceElem.style.display = 'block';
-      invoiceElem.style.position = 'fixed';
-      invoiceElem.style.top = '0';
-      invoiceElem.style.left = '0';
-      invoiceElem.style.width = '760px';
-      invoiceElem.style.zIndex = '99999';
-      invoiceElem.style.backgroundColor = '#ffffff';
-    }
-
     const opt = {
       margin: 0,
       filename: `${billMeta.invNo.replace(/\//g, '_')}.pdf`,
@@ -439,18 +414,6 @@ function App() {
 
     try {
       const pdfBlob = await html2pdf().set(opt).from(invoiceElem).output('blob');
-      
-      if (wasHidden) {
-        invoiceElem.classList.add('hidden');
-        invoiceElem.style.display = '';
-        invoiceElem.style.position = '';
-        invoiceElem.style.top = '';
-        invoiceElem.style.left = '';
-        invoiceElem.style.width = '';
-        invoiceElem.style.zIndex = '';
-        invoiceElem.style.backgroundColor = '';
-      }
-
       const pdfFile = new File([pdfBlob], `${record.invNo.replace(/\//g, '_')}.pdf`, { type: 'application/pdf' });
       const waMessage = buildWhatsAppText(record);
 
@@ -476,12 +439,10 @@ function App() {
       }
     } catch (err) {
       console.error(err);
-      if (wasHidden) invoiceElem.classList.add('hidden');
       window.print();
     }
   };
 
-  // Audit Modal PDF & WhatsApp Sharing
   const printOrShareAuditInvoice = async (inv, isWhatsApp = false) => {
     const element = document.getElementById('audit-modal-printable');
     if (!element) return;
@@ -689,9 +650,7 @@ function App() {
     a.click();
   };
 
-  // =========================================================================
-  // LOGIN SCREEN (WITH AUTO-PREFILLED & HIDDEN CREDENTIALS)
-  // =========================================================================
+  // LOGIN GATE
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-slate-900">
@@ -775,16 +734,14 @@ function App() {
     );
   }
 
-  // =========================================================================
-  // MAIN APP INTERFACE
-  // =========================================================================
+  // PERMANENT DESKTOP VIEW
   return (
-    <div className="max-w-5xl mx-auto px-2 sm:px-4 pt-2">
+    <div className="desktop-canvas max-w-5xl mx-auto px-4 pt-3">
       
-      {/* Top Header & Dual Mode Switcher + Logout */}
+      {/* Top Header Navigation */}
       <div className="no-print space-y-2 mb-3">
-        <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2.5">
             <ProjectorLogo />
             <div>
               <div className="font-extrabold text-sm text-slate-800 leading-tight">DREAM FOCUS</div>
@@ -793,24 +750,11 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-              <button 
-                onClick={() => toggleDeviceMode('mobile')}
-                className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'mobile' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-                📱 Mobile
-              </button>
-              <button 
-                onClick={() => toggleDeviceMode('laptop')}
-                className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'laptop' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-                💻 Laptop
-              </button>
-            </div>
-
             <button
               onClick={handleLogout}
-              className="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold text-xs px-2.5 py-2 rounded-lg border border-slate-200 transition flex items-center gap-1"
+              className="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-200 transition flex items-center gap-1"
               title="Logout from System">
-              🚪 <span className="hidden sm:inline">Logout</span>
+              🚪 Logout
             </button>
           </div>
         </div>
@@ -819,12 +763,12 @@ function App() {
         <div className="flex gap-2">
           <button 
             onClick={() => setTab('create')}
-            className={`flex-1 py-2 font-bold rounded-lg text-xs sm:text-sm transition shadow-sm ${tab === 'create' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'}`}>
+            className={`flex-1 py-2.5 font-bold rounded-lg text-xs sm:text-sm transition shadow-sm ${tab === 'create' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'}`}>
             📝 Create Bill
           </button>
           <button 
             onClick={() => setTab('reports')}
-            className={`flex-1 py-2 font-bold rounded-lg text-xs sm:text-sm transition shadow-sm ${tab === 'reports' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'}`}>
+            className={`flex-1 py-2.5 font-bold rounded-lg text-xs sm:text-sm transition shadow-sm ${tab === 'reports' ? 'bg-sky-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'}`}>
             📊 Reports & Analytics
           </button>
         </div>
@@ -832,193 +776,20 @@ function App() {
 
       {tab === 'create' ? (
         <div>
-          {/* Mobile Mode Form */}
-          {deviceMode === 'mobile' && (
-            <div className="no-print space-y-3">
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
-                <div className="flex justify-between items-center border-b pb-1.5">
-                  <span className="font-bold text-xs text-sky-700 uppercase tracking-wide">👤 Customer Details</span>
-                  <span className="text-[11px] font-mono text-slate-500">{billMeta.invNo}</span>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-600">Customer Name</label>
-                  <input className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold mt-0.5 outline-none focus:border-sky-600" placeholder="e.g. K. Ramkumar" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600">WhatsApp Mobile *</label>
-                    <input type="tel" className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold mt-0.5 outline-none focus:border-sky-600" placeholder="10-digit number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-600">Delivery Area</label>
-                    <input className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-semibold mt-0.5 outline-none focus:border-sky-600" placeholder="Madurai Area" value={billMeta.custAddr} onChange={e => setBillMeta({...billMeta, custAddr: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Items Card List */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2.5">
-                <div className="flex justify-between items-center border-b pb-1.5">
-                  <span className="font-bold text-xs text-sky-700 uppercase tracking-wide">📦 Projector Items</span>
-                  <button onClick={addItem} className="bg-sky-600 text-white font-bold text-[11px] px-2 py-0.5 rounded">+ Add Item</button>
-                </div>
-
-                {items.map((item, index) => (
-                  <div key={item.id} className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1.5">
-                    <div className="flex justify-between items-start gap-1.5">
-                      <span className="text-[9px] font-black text-white bg-slate-800 rounded px-1 py-0.5">#{index + 1}</span>
-                      <input 
-                        className="flex-1 bg-white border border-slate-300 rounded p-1.5 text-xs font-semibold outline-none focus:border-sky-600" 
-                        placeholder="Item / Model / Service" 
-                        value={item.desc} 
-                        onChange={e => updateItem(item.id, 'desc', e.target.value)} 
-                      />
-                      {items.length > 1 && (
-                        <button onClick={() => removeItem(item.id)} className="text-red-500 font-bold p-1 text-xs">✕</button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-1.5 items-center">
-                      <div>
-                        <label className="text-[9px] text-slate-500 font-bold">Category</label>
-                        <select className="w-full bg-white border border-slate-300 rounded p-1 text-[11px] font-semibold" value={item.category} onChange={e => updateItem(item.id, 'category', e.target.value)}>
-                          <option value="Sales Unit">Sales Unit</option>
-                          <option value="Service">Service</option>
-                          <option value="Accessory">Accessory</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[9px] text-slate-500 font-bold">Qty</label>
-                        <input type="number" className="w-full bg-white border border-slate-300 rounded p-1 text-xs text-center font-bold" value={item.qty} onChange={e => updateItem(item.id, 'qty', e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="text-[9px] text-slate-500 font-bold">Rate (₹)</label>
-                        <input type="number" className="w-full bg-white border border-slate-300 rounded p-1 text-xs text-right font-bold" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="text-right text-[11px] font-bold text-slate-800 pt-0.5 border-t border-slate-200">
-                      Total: ₹{((Number(item.qty) || 0) * (Number(item.rate) || 0)).toLocaleString('en-IN')}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pricing, GST & Payment */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-2 text-xs">
-                <span className="font-bold text-xs text-sky-700 uppercase tracking-wide block border-b pb-1">💰 Payment Details</span>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-slate-600">Gross Total:</span>
-                  <span className="font-bold">₹{grossTotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-slate-600">Discount (₹):</span>
-                  <input type="number" className="w-20 text-right bg-slate-50 border rounded p-1 font-semibold text-xs" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
-                </div>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-slate-600">Exchange (₹):</span>
-                  <input type="number" className="w-20 text-right bg-slate-50 border rounded p-1 font-semibold text-xs" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-t pt-1">
-                  <span className="font-bold text-slate-700">Taxable Value:</span>
-                  <span className="font-bold">₹{taxableAmount.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-slate-600">GST Slab:</span>
-                  <select className="bg-slate-50 border rounded p-1 font-bold text-sky-900 text-xs" value={pricing.gstRate} onChange={e => setPricing({...pricing, gstRate: Number(e.target.value)})}>
-                    <option value="18">18% (Standard)</option>
-                    <option value="28">28%</option>
-                    <option value="12">12%</option>
-                    <option value="5">5%</option>
-                    <option value="0">0% (Exempt)</option>
-                  </select>
-                </div>
-                <div className="flex justify-between items-center py-1 bg-slate-50 px-2 rounded font-black text-xs text-slate-900 border">
-                  <span>Net Grand Total:</span>
-                  <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
-                </div>
-
-                {/* Amount Paid with Full Pay & Advance */}
-                <div className="py-1.5 border-t border-slate-200">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-slate-700 text-[11px]">Payment Mode:</span>
-                    <div className="flex gap-1">
-                      <button 
-                        type="button" 
-                        onClick={handlePayFull} 
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded border transition ${pendingDue === 0 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
-                        ⚡ Full Pay
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={handleSetAdvance} 
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded border transition ${pendingDue > 0 ? 'bg-sky-600 text-white border-sky-600 shadow-sm' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
-                        ⏳ Advance
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center pt-0.5">
-                    <span className="font-bold text-sky-800 text-[11px]">Amount Paid (₹):</span>
-                    <input 
-                      type="number" 
-                      className="w-28 text-right bg-white border-2 border-sky-600 rounded p-1 font-black text-xs outline-none" 
-                      value={pricing.advance} 
-                      onChange={handleAmountPaidInput} 
-                    />
-                  </div>
-                </div>
-
-                <div className={`flex justify-between items-center p-1.5 rounded border font-black text-xs ${pendingDue === 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-red-50 text-red-600 border-red-300'}`}>
-                  <span>{pendingDue === 0 ? 'STATUS: PAID FULL' : 'BALANCE DUE:'}</span>
-                  <span>₹{pendingDue.toLocaleString('en-IN')}</span>
-                </div>
-
-                <div className="pt-1">
-                  <label className="text-[10px] font-bold text-slate-600 block mb-0.5">Payment Mode / Method:</label>
-                  <select className="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-xs font-bold text-sky-900" value={billMeta.paymentMode} onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
-                    <option value="GPay / PhonePe UPI">📱 GPay / PhonePe / UPI</option>
-                    <option value="Cash">💵 Cash</option>
-                    <option value="Bank Transfer / NEFT">🏦 Bank Transfer / NEFT</option>
-                    <option value="Debit / Credit Card">💳 Debit / Credit Card</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1 shadow">
-                  💬 Direct WhatsApp
-                </button>
-                <button onClick={() => setShowPreviewModal(true)} className="bg-slate-200 text-slate-800 font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1">
-                  👁️ Preview Bill
-                </button>
-              </div>
-
-              {/* Mobile Fixed Action Bar */}
-              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2 flex gap-2 z-40 shadow-lg">
-                <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 text-white font-bold py-2.5 rounded-lg text-xs flex items-center justify-center gap-1 shadow">
-                  📄 Share 1-Page PDF
-                </button>
-                <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs shadow">
-                  🖨️ Print
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STRICT SINGLE-PAGE PRINTABLE CANVAS */}
+          {/* ALWAYS DISPLAY STRICT SINGLE-PAGE DESKTOP INVOICE */}
           <div 
             ref={invoiceRef} 
             id="printable-invoice"
-            className={`bg-white rounded-xl shadow-md border border-slate-200 p-4 sm:p-5 ${deviceMode === 'mobile' && !showPreviewModal ? 'hidden md:block' : 'block'}`}>
+            className="bg-white rounded-xl shadow-md border border-slate-200 p-5">
             
             {/* Invoice Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-3 rounded-lg flex justify-between items-center mb-2.5">
-              <div className="flex items-center gap-2.5">
+            <div className="bg-gradient-to-r from-slate-900 to-sky-700 text-white p-3.5 rounded-lg flex justify-between items-center mb-3">
+              <div className="flex items-center gap-3">
                 <ProjectorLogo />
                 <div>
-                  <h1 className="text-base sm:text-lg font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
-                  <p className="text-sky-300 text-[9px] font-semibold tracking-wider uppercase mt-0.5">Sales • Chip-Level Service • Accessories</p>
-                  <p className="text-slate-300 text-[9px]">Sellur, Madurai - 625002 • Phone: +91 85085 50847</p>
+                  <h1 className="text-lg sm:text-xl font-black tracking-tight leading-none">DREAM FOCUS PROJECTORS</h1>
+                  <p className="text-sky-300 text-[9.5px] font-semibold tracking-wider uppercase mt-0.5">Sales • Chip-Level Service • Accessories</p>
+                  <p className="text-slate-300 text-[9.5px]">Sellur, Madurai - 625002 • Phone: +91 85085 50847</p>
                 </div>
               </div>
               <div className="text-right">
@@ -1030,81 +801,81 @@ function App() {
             </div>
 
             {/* Meta Grid */}
-            <div className="grid grid-cols-2 gap-2.5 bg-slate-50 border border-slate-200 rounded p-2 mb-2 text-[10.5px]">
+            <div className="grid grid-cols-2 gap-3 bg-slate-50 border border-slate-200 rounded p-2.5 mb-2.5 text-[11px]">
               <div>
-                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[9.5px]">Billed To</h3>
-                <div className="space-y-0.5">
-                  <div className="flex items-center"><span className="w-16 text-slate-500 font-semibold">Name:</span>
-                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" placeholder="Customer Name" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
+                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[10px]">Billed To (Customer Details)</h3>
+                <div className="space-y-1">
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Name:</span>
+                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" placeholder="Customer Name" value={billMeta.custName} onChange={e => setBillMeta({...billMeta, custName: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-16 text-slate-500 font-semibold">Phone:</span>
-                    <input className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" placeholder="Phone number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Phone:</span>
+                    <input className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" placeholder="Phone number" value={billMeta.custPhone} onChange={e => setBillMeta({...billMeta, custPhone: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-16 text-slate-500 font-semibold">Address:</span>
-                    <input className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" placeholder="Address" value={billMeta.custAddr} onChange={e => setBillMeta({...billMeta, custAddr: e.target.value})} />
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Address:</span>
+                    <input className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" placeholder="Address" value={billMeta.custAddr} onChange={e => setBillMeta({...billMeta, custAddr: e.target.value})} />
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[9.5px]">Invoice Details</h3>
-                <div className="space-y-0.5">
-                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Invoice No:</span>
-                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" value={billMeta.invNo} onChange={e => setBillMeta({...billMeta, invNo: e.target.value})} />
+                <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[10px]">Invoice Meta</h3>
+                <div className="space-y-1">
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Invoice No:</span>
+                    <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" value={billMeta.invNo} onChange={e => setBillMeta({...billMeta, invNo: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Date:</span>
-                    <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Date:</span>
+                    <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Proprietor:</span>
-                    <span className="font-semibold text-slate-800 text-[10.5px]">M. KANAGAVEL</span>
+                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Proprietor:</span>
+                    <span className="font-semibold text-slate-800 text-[11px]">M. KANAGAVEL</span>
                   </div>
                   <div className="flex items-center pt-0.5">
-                    <span className="w-20 text-slate-500 font-semibold">Payment Mode:</span>
-                    <strong className="text-slate-900 bg-sky-100 px-1 py-0.2 rounded border border-sky-200 text-[10px]">{billMeta.paymentMode}</strong>
+                    <span className="w-24 text-slate-500 font-semibold">Payment Mode:</span>
+                    <strong className="text-slate-900 bg-sky-100 px-1 py-0.2 rounded border border-sky-200 text-[10.5px]">{billMeta.paymentMode}</strong>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Items Table */}
-            <div className="overflow-x-auto mb-2">
-              <table className="w-full text-left border border-slate-200 text-[10.5px]">
+            <div className="overflow-x-auto mb-2.5">
+              <table className="w-full text-left border border-slate-200 text-[11px]">
                 <thead>
-                  <tr className="bg-slate-900 text-white uppercase text-[9.5px]">
-                    <th className="p-1 text-center w-7">#</th>
-                    <th className="p-1">Item Description</th>
-                    <th className="p-1 w-20 text-center">Category</th>
-                    <th className="p-1 text-center w-12">Qty</th>
-                    <th className="p-1 text-right w-16">Rate (₹)</th>
-                    <th className="p-1 text-right w-20">Total (₹)</th>
-                    <th className="p-1 text-center w-6 no-print"></th>
+                  <tr className="bg-slate-900 text-white uppercase text-[10px]">
+                    <th className="p-1.5 text-center w-8">#</th>
+                    <th className="p-1.5">Item Description</th>
+                    <th className="p-1.5 w-24 text-center">Category</th>
+                    <th className="p-1.5 text-center w-14">Qty</th>
+                    <th className="p-1.5 text-right w-20">Rate (₹)</th>
+                    <th className="p-1.5 text-right w-24">Total (₹)</th>
+                    <th className="p-1.5 text-center w-8 no-print"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {items.map((item, index) => (
                     <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="p-1 text-center font-bold text-slate-500">{index + 1}</td>
-                      <td className="p-1">
-                        <input className="w-full bg-transparent outline-none font-medium text-slate-800 text-[10.5px]" placeholder="Item / Model" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} />
+                      <td className="p-1.5 text-center font-bold text-slate-500">{index + 1}</td>
+                      <td className="p-1.5">
+                        <input className="w-full bg-transparent outline-none font-medium text-slate-800 text-[11px]" placeholder="Item / Model" value={item.desc} onChange={e => updateItem(item.id, 'desc', e.target.value)} />
                       </td>
-                      <td className="p-1 text-center">
-                        <select className="bg-transparent border border-slate-200 rounded px-1 text-[9.5px] outline-none" value={item.category} onChange={e => updateItem(item.id, 'category', e.target.value)}>
+                      <td className="p-1.5 text-center">
+                        <select className="bg-transparent border border-slate-200 rounded px-1 text-[10px] outline-none" value={item.category} onChange={e => updateItem(item.id, 'category', e.target.value)}>
                           <option value="Sales Unit">Sales Unit</option>
                           <option value="Service">Service</option>
                           <option value="Accessory">Accessory</option>
                         </select>
                       </td>
-                      <td className="p-1 text-center">
-                        <input type="number" className="w-full text-center bg-transparent outline-none font-semibold text-[10.5px]" value={item.qty} onChange={e => updateItem(item.id, 'qty', e.target.value)} />
+                      <td className="p-1.5 text-center">
+                        <input type="number" className="w-full text-center bg-transparent outline-none font-semibold text-[11px]" value={item.qty} onChange={e => updateItem(item.id, 'qty', e.target.value)} />
                       </td>
-                      <td className="p-1 text-right">
-                        <input type="number" className="w-full text-right bg-transparent outline-none font-semibold text-[10.5px]" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.value)} />
+                      <td className="p-1.5 text-right">
+                        <input type="number" className="w-full text-right bg-transparent outline-none font-semibold text-[11px]" value={item.rate} onChange={e => updateItem(item.id, 'rate', e.target.value)} />
                       </td>
-                      <td className="p-1 text-right font-bold text-slate-900">
+                      <td className="p-1.5 text-right font-bold text-slate-900">
                         ₹{((Number(item.qty) || 0) * (Number(item.rate) || 0)).toLocaleString('en-IN')}
                       </td>
-                      <td className="p-1 text-center no-print">
-                        <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700 font-bold text-[11px]">✕</button>
+                      <td className="p-1.5 text-center no-print">
+                        <button onClick={() => removeItem(item.id)} className="text-red-500 hover:text-red-700 font-bold text-xs">✕</button>
                       </td>
                     </tr>
                   ))}
@@ -1112,22 +883,22 @@ function App() {
               </table>
             </div>
 
-            <button onClick={addItem} className="no-print bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2 py-0.5 rounded text-[11px] transition mb-2">
+            <button onClick={addItem} className="no-print bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2.5 py-1 rounded text-xs transition mb-2.5">
               + Add Item / Service
             </button>
 
             {/* Calculations & Warranty */}
-            <div className="grid grid-cols-2 gap-3 items-start mb-2">
-              <div className="bg-sky-50 border-l-4 border-sky-600 p-2 rounded-r text-[10px] text-slate-700 space-y-1">
-                <h4 className="font-bold text-sky-900 uppercase tracking-wide text-[9.5px]">🛡️ 3-Day Testing Warranty</h4>
+            <div className="grid grid-cols-2 gap-4 items-start mb-2.5">
+              <div className="bg-sky-50 border-l-4 border-sky-600 p-2.5 rounded-r text-[10.5px] text-slate-700 space-y-1">
+                <h4 className="font-bold text-sky-900 uppercase tracking-wide text-[10px]">🛡️ 3-Day Testing Warranty</h4>
                 <p>• 3-day testing warranty covers optical clarity and lamp performance.</p>
                 <p>• Free diagnostic checkup for future servicing and replacement lamps.</p>
                 <p className="text-slate-500">• Power ballast surge burn & liquid ingress are excluded.</p>
                 
-                <div className="pt-1 border-t border-sky-200 space-y-1 no-print">
+                <div className="pt-1.5 border-t border-sky-200 space-y-1.5 no-print">
                   <div className="flex items-center justify-between">
-                    <label className="font-bold text-slate-700 text-[9.5px]">GST Slab:</label>
-                    <select className="bg-white border rounded p-0.5 text-[10px] font-bold text-sky-900" value={pricing.gstRate} onChange={e => setPricing({...pricing, gstRate: Number(e.target.value)})}>
+                    <label className="font-bold text-slate-700 text-[10px]">GST Slab:</label>
+                    <select className="bg-white border rounded p-0.5 text-[10.5px] font-bold text-sky-900" value={pricing.gstRate} onChange={e => setPricing({...pricing, gstRate: Number(e.target.value)})}>
                       <option value="18">18% (Standard)</option>
                       <option value="28">28%</option>
                       <option value="12">12%</option>
@@ -1136,8 +907,8 @@ function App() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-0.5 text-[9.5px]">Status:</label>
-                    <select className="w-full bg-white border rounded p-0.5 text-[10px] font-bold text-sky-900" value={billMeta.paymentStatus} onChange={e => handleStatusChange(e.target.value)}>
+                    <label className="block font-bold text-slate-700 mb-0.5 text-[10px]">Status:</label>
+                    <select className="w-full bg-white border rounded p-0.5 text-[10.5px] font-bold text-sky-900" value={billMeta.paymentStatus} onChange={e => handleStatusChange(e.target.value)}>
                       <option value="Advance Paid">Advance Paid (Deposit)</option>
                       <option value="Full Paid">Full Paid (Zero Due)</option>
                       <option value="Pending (Zero Advance)">Pending Credit</option>
@@ -1145,8 +916,8 @@ function App() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-bold text-slate-700 mb-0.5 text-[9.5px]">Payment Mode / Method:</label>
-                    <select className="w-full bg-white border rounded p-0.5 text-[10px] font-bold text-sky-900" value={billMeta.paymentMode} onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
+                    <label className="block font-bold text-slate-700 mb-0.5 text-[10px]">Payment Mode / Method:</label>
+                    <select className="w-full bg-white border rounded p-0.5 text-[10.5px] font-bold text-sky-900" value={billMeta.paymentMode} onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
                       <option value="GPay / PhonePe UPI">📱 GPay / PhonePe / UPI</option>
                       <option value="Cash">💵 Cash</option>
                       <option value="Bank Transfer / NEFT">🏦 Bank Transfer / NEFT</option>
@@ -1156,25 +927,25 @@ function App() {
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-2 rounded border border-slate-200 text-[10.5px] space-y-0.5 font-medium">
+              <div className="bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] space-y-1 font-medium">
                 <div className="flex justify-between text-slate-600">
                   <span>Gross Value:</span>
                   <span>₹{grossTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">Discount (₹):</span>
-                  <input type="number" className="w-16 text-right bg-white border rounded px-1 text-[10.5px]" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
+                  <input type="number" className="w-20 text-right bg-white border rounded px-1.5 py-0.5 text-[11px]" value={pricing.discount} onChange={e => setPricing({...pricing, discount: e.target.value})} />
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-600">Exchange (₹):</span>
-                  <input type="number" className="w-16 text-right bg-white border rounded px-1 text-[10.5px]" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
+                  <input type="number" className="w-20 text-right bg-white border rounded px-1.5 py-0.5 text-[11px]" value={pricing.exchange} onChange={e => setPricing({...pricing, exchange: e.target.value})} />
                 </div>
-                <div className="flex justify-between text-slate-900 font-bold border-t pt-0.5">
+                <div className="flex justify-between text-slate-900 font-bold border-t pt-1">
                   <span>Taxable:</span>
                   <span>₹{taxableAmount.toLocaleString('en-IN')}</span>
                 </div>
                 {pricing.gstRate > 0 && (
-                  <div className="bg-sky-50/70 p-1 rounded border border-sky-100 space-y-0.5 text-slate-700 text-[9.5px]">
+                  <div className="bg-sky-50/70 p-1.5 rounded border border-sky-100 space-y-0.5 text-slate-700 text-[10px]">
                     <div className="flex justify-between">
                       <span>CGST ({pricing.gstRate / 2}%):</span>
                       <span>₹{gstBreakdown.cgst.toFixed(2)}</span>
@@ -1185,7 +956,7 @@ function App() {
                     </div>
                   </div>
                 )}
-                <div className="flex justify-between text-slate-900 font-black border-t pt-0.5 text-xs">
+                <div className="flex justify-between text-slate-900 font-black border-t pt-1 text-xs">
                   <span>Net Grand Total:</span>
                   <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
                 </div>
@@ -1201,25 +972,25 @@ function App() {
                     <button 
                       type="button" 
                       onClick={handlePayFull} 
-                      className={`no-print text-[8.5px] font-bold px-1 py-0.2 rounded border ${pendingDue === 0 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                      className={`no-print text-[9px] font-bold px-1.5 py-0.5 rounded border ${pendingDue === 0 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
                       Full
                     </button>
                     <button 
                       type="button" 
                       onClick={handleSetAdvance} 
-                      className={`no-print text-[8.5px] font-bold px-1 py-0.2 rounded border ${pendingDue > 0 ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                      className={`no-print text-[9px] font-bold px-1.5 py-0.5 rounded border ${pendingDue > 0 ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
                       Adv
                     </button>
                   </div>
                   <input 
                     type="number" 
-                    className="w-20 text-right bg-white border border-slate-300 rounded px-1 text-slate-900 font-bold text-[11px]" 
+                    className="w-24 text-right bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-900 font-bold text-xs" 
                     value={pricing.advance} 
                     onChange={handleAmountPaidInput} 
                   />
                 </div>
                 
-                <div className={`flex justify-between font-black border-t pt-0.5 text-xs ${pendingDue === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <div className={`flex justify-between font-black border-t pt-1 text-xs ${pendingDue === 0 ? 'text-emerald-600 border-emerald-500' : 'text-red-600 border-red-600'}`}>
                   <span>{pendingDue === 0 ? 'STATUS: PAID IN FULL' : 'BALANCE DUE:'}</span>
                   <span>₹{pendingDue.toLocaleString('en-IN')}</span>
                 </div>
@@ -1227,61 +998,50 @@ function App() {
             </div>
 
             {/* Thank You Note */}
-            <div className="bg-slate-50 border border-slate-200 rounded p-1.5 text-center mb-2">
-              <div className="text-[10.5px] font-bold text-slate-800">
+            <div className="bg-slate-50 border border-slate-200 rounded p-1.5 text-center mb-2.5">
+              <div className="text-[11px] font-bold text-slate-800">
                 ✨ Thank you for choosing DREAM FOCUS PROJECTORS!
               </div>
-              <div className="text-[9px] text-slate-500">
+              <div className="text-[9.5px] text-slate-500">
                 Contact: <strong>+91 85085 50847</strong> | No. 1/A Rengarajan street, Boss veedhi, Sellur, Madurai - 625002
               </div>
             </div>
 
             {/* Footer Stamp & Signature */}
-            <div className="flex justify-between items-end border-t border-slate-300 pt-1.5">
-              <div className="text-[9.5px] text-slate-500">
+            <div className="flex justify-between items-end border-t border-slate-300 pt-2">
+              <div className="text-[10px] text-slate-500">
                 <p className="font-semibold text-slate-700">DREAM FOCUS PROJECTORS</p>
-                <p>Payment Mode: <strong className="text-slate-900 bg-slate-100 px-1 py-0.2 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
+                <p>Payment Mode: <strong className="text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">{billMeta.paymentMode}</strong></p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <RubberStamp isPaid={pendingDue === 0} />
                 <DigitalSignature />
               </div>
             </div>
-
-            {deviceMode === 'mobile' && showPreviewModal && (
-              <div className="mt-3 text-center no-print">
-                <button onClick={() => setShowPreviewModal(false)} className="bg-slate-800 text-white font-bold py-1.5 px-4 rounded-lg text-xs">
-                  ✕ Close Preview
-                </button>
-              </div>
-            )}
           </div>
 
-          {deviceMode === 'laptop' && (
-            <div className="mt-3 flex flex-wrap gap-2 no-print">
-              <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-lg shadow transition flex items-center justify-center gap-1 text-xs">
-                💬 Direct Customer WhatsApp
-              </button>
-              <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-3.5 rounded-lg shadow transition flex items-center justify-center gap-1 text-xs">
-                📄 Share 1-Page PDF
-              </button>
-              <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 px-4 rounded-lg shadow transition text-xs">
-                💾 Save & Print
-              </button>
-              <button onClick={resetForm} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-3 rounded-lg transition text-xs">
-                🔄 New Bill
-              </button>
-            </div>
-          )}
+          {/* Action Buttons Always in Desktop Toolbar Format */}
+          <div className="mt-3.5 flex flex-wrap gap-2.5 no-print">
+            <button onClick={openDirectCustomerWhatsApp} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-1.5 text-xs">
+              💬 Direct Customer WhatsApp
+            </button>
+            <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-2 text-xs">
+              📄 Share 1-Page PDF to WhatsApp
+            </button>
+            <button onClick={() => { saveCurrentOrder(); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-lg shadow transition text-xs">
+              💾 Save & Print
+            </button>
+            <button onClick={resetForm} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2.5 px-3.5 rounded-lg transition text-xs">
+              🔄 New Bill
+            </button>
+          </div>
         </div>
       ) : (
-        /* ========================================================================= */
-        /* FULL RESTORED REPORTS & ANALYTICS SECTION WITH CHARTS, MATRIX & PIN PROTECTED AUDIT */
-        /* ========================================================================= */
+        /* REPORTS & AUDIT SECTION */
         <div className="space-y-4">
           
-          {/* Top Filters: Year, Month, and PIN Settings */}
+          {/* Top Filters */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap justify-between items-center gap-2.5">
             <div>
               <h2 className="text-sm sm:text-base font-black text-slate-900">Revenue Analytics & Audit Ledger</h2>
@@ -1327,7 +1087,7 @@ function App() {
             </div>
           </div>
 
-          {/* 4 Executive KPI Metric Cards */}
+          {/* 4 KPI Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="bg-white border-l-4 border-sky-600 p-2.5 rounded-xl border border-slate-200 shadow-sm">
               <span className="text-[10px] font-bold text-slate-500 uppercase">Gross Sales</span>
@@ -1351,7 +1111,7 @@ function App() {
             </div>
           </div>
 
-          {/* VISUAL CHARTS ROW 1: 12-Month Performance Bar Chart */}
+          {/* Bar Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <h3 className="font-bold text-slate-800 text-xs mb-1.5 flex items-center justify-between">
               <span>📈 12-Month Performance Comparison ({analyticsYear})</span>
@@ -1362,7 +1122,7 @@ function App() {
             </div>
           </div>
 
-          {/* VISUAL CHARTS ROW 2: 2 Donut & Pie Charts Side by Side */}
+          {/* Donut & Pie Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
               <h3 className="font-bold text-slate-800 text-xs mb-1.5">
@@ -1383,7 +1143,7 @@ function App() {
             </div>
           </div>
 
-          {/* 12-Month Detailed Performance Matrix Table */}
+          {/* 12-Month Matrix Table */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <h3 className="font-bold text-slate-900 text-xs mb-2 flex justify-between items-center">
               <span>📅 Month-by-Month Financial Summary Matrix ({analyticsYear})</span>
@@ -1449,7 +1209,7 @@ function App() {
             )}
           </div>
 
-          {/* PASSWORD PROTECTED COMPLETE AUDIT LEDGER */}
+          {/* Audit Ledger Table */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <div className="flex justify-between items-center mb-2">
               <div>
@@ -1459,7 +1219,6 @@ function App() {
                     🔒 PIN Protected Delete
                   </span>
                 </h3>
-                <span className="text-[10px] text-slate-500">Only authorized Admin PIN can delete records.</span>
               </div>
             </div>
             
@@ -1528,7 +1287,7 @@ function App() {
         </div>
       )}
 
-      {/* SECURITY PIN CONFIRMATION MODAL TO DELETE BILL */}
+      {/* PIN DELETE MODAL */}
       {deleteTargetInv && (
         <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-3 z-50 no-print">
           <div className="bg-white max-w-xs w-full p-4 rounded-2xl shadow-2xl border border-slate-200 text-center space-y-2.5">
@@ -1536,7 +1295,7 @@ function App() {
               🔒
             </div>
             <h4 className="text-sm font-black text-slate-900">Protected Admin Action</h4>
-            <p className="text-[11px] text-slate-500">Enter Security PIN to permanently delete invoice <strong>{deleteTargetInv}</strong>.</p>
+            <p className="text-[11px] text-slate-500">Enter Security PIN to delete invoice <strong>{deleteTargetInv}</strong>.</p>
             
             <input
               type="password"
@@ -1568,7 +1327,7 @@ function App() {
         </div>
       )}
 
-      {/* CHANGE SECURITY PIN MODAL */}
+      {/* CHANGE PIN MODAL */}
       {showChangePinModal && (
         <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-3 z-50 no-print">
           <div className="bg-white max-w-xs w-full p-4 rounded-2xl shadow-2xl border border-slate-200 text-center space-y-3">
@@ -1576,7 +1335,7 @@ function App() {
               🔐
             </div>
             <h4 className="text-sm font-black text-slate-900">Change Admin PIN</h4>
-            <p className="text-[11px] text-slate-500">Current PIN: <strong>{adminPin}</strong>. Set a new secret code to protect bill deletions.</p>
+            <p className="text-[11px] text-slate-500">Current PIN: <strong>{adminPin}</strong></p>
             
             <input
               type="text"
