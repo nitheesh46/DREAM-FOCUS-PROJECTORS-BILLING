@@ -132,21 +132,31 @@ const DEFAULT_RECORDS = [
     paymentStatus: "Full Paid", paymentMode: "Cash",
     items: [{ id: 1, desc: "Chip-Level Ballast Board Repair", category: "Service", qty: 1, rate: 3500 }],
     grossTotal: 3500, discount: 0, exchange: 0, taxableAmount: 3500, gstRate: 18, cgst: 315, sgst: 315, totalTax: 630, netPayable: 4130, paid: 4130, pending: 0
-  },
-  {
-    invNo: "DFP/2026/1104", date: "2026-08-22", custName: "Meenakshi High School", custPhone: "9842100004", custAddr: "Simmakkal, Madurai",
-    paymentStatus: "Advance Paid", paymentMode: "GPay / PhonePe UPI",
-    items: [{ id: 1, desc: "Panasonic Classroom Projector Setup", category: "Sales Unit", qty: 2, rate: 9500 }],
-    grossTotal: 19000, discount: 1000, exchange: 1500, taxableAmount: 16500, gstRate: 18, cgst: 1485, sgst: 1485, totalTax: 2970, netPayable: 19470, paid: 10000, pending: 9470
   }
 ];
 
 function App() {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('DFP_USER_SESSION') === 'true';
+  });
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   const [tab, setTab] = useState('create');
   const [deviceMode, setDeviceMode] = useState(() => window.innerWidth < 768 ? 'mobile' : 'laptop');
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null);
   const invoiceRef = useRef(null);
+
+  // Security PIN State for Record Deletion
+  const [adminPin, setAdminPin] = useState(() => localStorage.getItem('DFP_SECURITY_PIN') || '8508');
+  const [deleteTargetInv, setDeleteTargetInv] = useState(null);
+  const [inputPin, setInputPin] = useState('');
+  const [pinErrorMessage, setPinErrorMessage] = useState('');
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [newPinInput, setNewPinInput] = useState('');
 
   // Chart References
   const barChartRef = useRef(null);
@@ -182,7 +192,7 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_CLEAN_BILLS_V1');
+    const saved = localStorage.getItem('DFP_CLEAN_SECURE_BILLS_V3');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
@@ -190,7 +200,7 @@ function App() {
   const [analyticsMonth, setAnalyticsMonth] = useState('ALL');
 
   useEffect(() => {
-    localStorage.setItem('DFP_CLEAN_BILLS_V1', JSON.stringify(history));
+    localStorage.setItem('DFP_CLEAN_SECURE_BILLS_V3', JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
@@ -206,6 +216,27 @@ function App() {
   const toggleDeviceMode = (mode) => {
     setDeviceMode(mode);
     localStorage.setItem('DFP_USER_MODE_PREF', mode);
+  };
+
+  // Login & Logout Handlers
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    if (loginUser.trim() === 'Nitheesh' && loginPass === 'Dreamfocusprojector2026') {
+      setIsAuthenticated(true);
+      localStorage.setItem('DFP_USER_SESSION', 'true');
+      setLoginError('');
+    } else {
+      setLoginError('❌ Invalid Username or Password. Please try again.');
+    }
+  };
+
+  const handleLogout = () => {
+    if (confirm("Are you sure you want to log out?")) {
+      setIsAuthenticated(false);
+      localStorage.removeItem('DFP_USER_SESSION');
+      setLoginUser('');
+      setLoginPass('');
+    }
   };
 
   // Live Calculations
@@ -297,6 +328,36 @@ function App() {
       return idx >= 0 ? prev.map((p, i) => i === idx ? record : p) : [record, ...prev];
     });
     return record;
+  };
+
+  // Password Protected Deletion Handlers
+  const handleRequestDelete = (invNo) => {
+    setDeleteTargetInv(invNo);
+    setInputPin('');
+    setPinErrorMessage('');
+  };
+
+  const handleConfirmDelete = () => {
+    if (inputPin.trim() === adminPin.trim()) {
+      setHistory(prev => prev.filter(h => h.invNo !== deleteTargetInv));
+      setDeleteTargetInv(null);
+      setInputPin('');
+      setPinErrorMessage('');
+    } else {
+      setPinErrorMessage('❌ Incorrect PIN! Cannot delete this invoice.');
+    }
+  };
+
+  const handleSaveNewPin = () => {
+    if (newPinInput.trim().length >= 4) {
+      setAdminPin(newPinInput.trim());
+      localStorage.setItem('DFP_SECURITY_PIN', newPinInput.trim());
+      setShowChangePinModal(false);
+      setNewPinInput('');
+      alert('Security PIN updated successfully!');
+    } else {
+      alert('PIN must be at least 4 characters long.');
+    }
   };
 
   const buildWhatsAppText = (record) => {
@@ -523,7 +584,7 @@ function App() {
 
   // Chart.js Graphs
   useEffect(() => {
-    if (tab !== 'reports') return;
+    if (tab !== 'reports' || !isAuthenticated) return;
 
     if (barChartInst.current) barChartInst.current.destroy();
     if (pieChartInst.current) pieChartInst.current.destroy();
@@ -597,7 +658,7 @@ function App() {
       if (pieChartInst.current) pieChartInst.current.destroy();
       if (modeChartInst.current) modeChartInst.current.destroy();
     };
-  }, [tab, monthlyMatrix, kpis, paymentModesMap, filteredHistory]);
+  }, [tab, monthlyMatrix, kpis, paymentModesMap, filteredHistory, isAuthenticated]);
 
   const exportToCSV = () => {
     let csv = "Invoice No,Date,Customer Name,Phone,Mode,Taxable Val,GST Rate,Total GST,Net Payable,Paid,Pending Due,Status\n";
@@ -612,30 +673,108 @@ function App() {
     a.click();
   };
 
+  // =========================================================================
+  // 0. AUTHENTICATION / LOGIN VIEW GATE
+  // =========================================================================
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-slate-900">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 border border-slate-800">
+          <div className="text-center space-y-2">
+            <div className="flex justify-center">
+              <div className="p-3 bg-sky-50 rounded-2xl border border-sky-100 shadow-inner">
+                <ProjectorLogo />
+              </div>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">DREAM FOCUS PROJECTORS</h2>
+            <p className="text-xs text-sky-600 font-bold uppercase tracking-wider">Authorized Staff Portal</p>
+            <p className="text-[11px] text-slate-400">Madurai Branch • Sellur, Madurai - 625002</p>
+          </div>
+
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Username</label>
+              <input
+                type="text"
+                required
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-sky-600 focus:bg-white transition"
+                placeholder="Enter Username"
+                value={loginUser}
+                onChange={e => { setLoginUser(e.target.value); setLoginError(''); }}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+              <input
+                type="password"
+                required
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-sky-600 focus:bg-white transition"
+                placeholder="Enter Password"
+                value={loginPass}
+                onChange={e => { setLoginPass(e.target.value); setLoginError(''); }}
+              />
+            </div>
+
+            {loginError && (
+              <div className="p-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-bold text-center">
+                {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-lg text-sm transition shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2">
+              🔐 Login to System
+            </button>
+          </form>
+
+          <div className="border-t border-slate-100 pt-3 text-center text-[10.5px] text-slate-400">
+            Protected Billing & Accounts Ledger System
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // AUTHENTICATED APPLICATION INTERFACE
+  // =========================================================================
   return (
     <div className="max-w-5xl mx-auto px-2 sm:px-4 pt-2">
       
-      {/* Top Header & Dual Mode Switcher */}
+      {/* Top Header & Dual Mode Switcher + Logout */}
       <div className="no-print space-y-2 mb-3">
         <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-2">
             <ProjectorLogo />
             <div>
               <div className="font-extrabold text-sm text-slate-800 leading-tight">DREAM FOCUS</div>
-              <div className="text-[10px] text-slate-500 font-semibold">Madurai Projector Billing & Accounts</div>
+              <div className="text-[10px] text-slate-500 font-semibold">User: <strong className="text-sky-700">Nitheesh</strong></div>
             </div>
           </div>
 
-          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-            <button 
-              onClick={() => toggleDeviceMode('mobile')}
-              className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'mobile' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-              📱 Mobile
-            </button>
-            <button 
-              onClick={() => toggleDeviceMode('laptop')}
-              className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'laptop' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-              💻 Laptop
+          <div className="flex items-center gap-2">
+            <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+              <button 
+                onClick={() => toggleDeviceMode('mobile')}
+                className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'mobile' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                📱 Mobile
+              </button>
+              <button 
+                onClick={() => toggleDeviceMode('laptop')}
+                className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-md transition ${deviceMode === 'laptop' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+                💻 Laptop
+              </button>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-bold text-xs px-2.5 py-2 rounded-lg border border-slate-200 transition flex items-center gap-1"
+              title="Logout from System">
+              🚪 <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
@@ -798,7 +937,6 @@ function App() {
                   <span>₹{pendingDue.toLocaleString('en-IN')}</span>
                 </div>
 
-                {/* Mobile Payment Mode Selector */}
                 <div className="pt-1">
                   <label className="text-[10px] font-bold text-slate-600 block mb-0.5">Payment Mode / Method:</label>
                   <select className="w-full bg-slate-50 border border-slate-300 rounded p-1.5 text-xs font-bold text-sky-900" value={billMeta.paymentMode} onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
@@ -831,9 +969,7 @@ function App() {
             </div>
           )}
 
-          {/* ========================================================================= */}
           {/* STRICT SINGLE-PAGE PRINTABLE CANVAS */}
-          {/* ========================================================================= */}
           <div 
             ref={invoiceRef} 
             id="printable-invoice"
@@ -877,18 +1013,17 @@ function App() {
               <div>
                 <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[9.5px]">Invoice Details</h3>
                 <div className="space-y-0.5">
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Invoice No:</span>
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Invoice No:</span>
                     <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" value={billMeta.invNo} onChange={e => setBillMeta({...billMeta, invNo: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Date:</span>
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Date:</span>
                     <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[10.5px]" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Proprietor:</span>
+                  <div className="flex items-center"><span className="w-20 text-slate-500 font-semibold">Proprietor:</span>
                     <span className="font-semibold text-slate-800 text-[10.5px]">M. KANAGAVEL</span>
                   </div>
-                  {/* Payment Mode Highlighted on Bill Meta */}
                   <div className="flex items-center pt-0.5">
-                    <span className="w-24 text-slate-500 font-semibold">Payment Mode:</span>
+                    <span className="w-20 text-slate-500 font-semibold">Payment Mode:</span>
                     <strong className="text-slate-900 bg-sky-100 px-1 py-0.2 rounded border border-sky-200 text-[10px]">{billMeta.paymentMode}</strong>
                   </div>
                 </div>
@@ -953,7 +1088,6 @@ function App() {
                 <p>• Free diagnostic checkup for future servicing and replacement lamps.</p>
                 <p className="text-slate-500">• Power ballast surge burn & liquid ingress are excluded.</p>
                 
-                {/* Form Controls for Laptop View (Includes Payment Mode Selector!) */}
                 <div className="pt-1 border-t border-sky-200 space-y-1 no-print">
                   <div className="flex items-center justify-between">
                     <label className="font-bold text-slate-700 text-[9.5px]">GST Slab:</label>
@@ -974,7 +1108,6 @@ function App() {
                       <option value="Exchange Unit">Exchange Trade-In</option>
                     </select>
                   </div>
-                  {/* Laptop Payment Mode Selector */}
                   <div>
                     <label className="block font-bold text-slate-700 mb-0.5 text-[9.5px]">Payment Mode / Method:</label>
                     <select className="w-full bg-white border rounded p-0.5 text-[10px] font-bold text-sky-900" value={billMeta.paymentMode} onChange={e => setBillMeta({...billMeta, paymentMode: e.target.value})}>
@@ -1021,7 +1154,6 @@ function App() {
                   <span>₹{gstBreakdown.netPayable.toLocaleString('en-IN')}</span>
                 </div>
                 
-                {/* Clear Payment Mode Display in Total Box */}
                 <div className="flex justify-between text-slate-700 font-semibold pt-0.5">
                   <span>Payment Mode:</span>
                   <span className="text-slate-900 font-bold">{billMeta.paymentMode}</span>
@@ -1110,11 +1242,11 @@ function App() {
         </div>
       ) : (
         /* ========================================================================= */
-        /* FULL RESTORED REPORTS & ANALYTICS SECTION WITH CHARTS, MATRIX & TRACKER */
+        /* FULL REPORTS & ANALYTICS SECTION WITH CHARTS, MATRIX & PIN PROTECTED AUDIT */
         /* ========================================================================= */
         <div className="space-y-4">
           
-          {/* Top Filters: Both Year and Month Selectors */}
+          {/* Top Filters: Year, Month, and PIN Settings */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5 flex flex-wrap justify-between items-center gap-2.5">
             <div>
               <h2 className="text-sm sm:text-base font-black text-slate-900">Revenue Analytics & Audit Ledger</h2>
@@ -1149,6 +1281,10 @@ function App() {
                   <option value="12">December</option>
                 </select>
               </div>
+
+              <button onClick={() => setShowChangePinModal(true)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-2.5 py-1 rounded border border-slate-300 transition flex items-center gap-1">
+                🔐 Security PIN
+              </button>
 
               <button onClick={exportToCSV} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-2.5 py-1 rounded transition flex items-center gap-1">
                 📥 Export CSV
@@ -1216,7 +1352,7 @@ function App() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <h3 className="font-bold text-slate-900 text-xs mb-2 flex justify-between items-center">
               <span>📅 Month-by-Month Financial Summary Matrix ({analyticsYear})</span>
-              <span className="text-[10px] text-slate-400">Audited Monthly Breakup</span>
+              <span className="text-[10px] text-slate-400">Audited Breakup</span>
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border border-slate-200">
@@ -1248,7 +1384,7 @@ function App() {
             </div>
           </div>
 
-          {/* Pending Debt Follow-up Section with 1-Click WhatsApp Reminders */}
+          {/* Pending Debt Follow-up Section */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <h3 className="font-bold text-red-600 text-xs mb-2">⚠️ Pending Debt Collection Tracker</h3>
             {pendingCustomersList.length === 0 ? (
@@ -1278,11 +1414,18 @@ function App() {
             )}
           </div>
 
-          {/* COMPLETE AUDIT LEDGER WITH DIRECT PDF VIEW */}
+          {/* PASSWORD PROTECTED COMPLETE AUDIT LEDGER */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-bold text-slate-900 text-xs">📋 Complete Invoice Audit Ledger</h3>
-              <span className="text-[10px] text-slate-500">Click <strong>👁️ PDF View</strong> for full 1-page bill</span>
+              <div>
+                <h3 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                  <span>📋 Complete Invoice Audit Ledger</span>
+                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded border border-amber-300">
+                    🔒 PIN Protected Delete
+                  </span>
+                </h3>
+                <span className="text-[10px] text-slate-500">Only authorized Admin PIN can delete records.</span>
+              </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -1333,8 +1476,11 @@ function App() {
                           className="text-slate-600 hover:text-slate-900 font-bold px-1 text-[10px] mr-1">
                           ✏️ Edit
                         </button>
-                        <button onClick={() => setHistory(history.filter(h => h.invNo !== item.invNo))} className="text-red-500 hover:text-red-700 font-bold px-1 text-[10px]">
-                          ✕
+                        <button 
+                          onClick={() => handleRequestDelete(item.invNo)} 
+                          className="text-red-500 hover:text-red-700 font-bold px-1.5 py-0.5 rounded text-[10px] hover:bg-red-50 transition"
+                          title="PIN Protected Delete">
+                          🗑️ Delete
                         </button>
                       </td>
                     </tr>
@@ -1344,6 +1490,82 @@ function App() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* SECURITY PIN CONFIRMATION MODAL TO DELETE BILL */}
+      {deleteTargetInv && (
+        <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-3 z-50 no-print">
+          <div className="bg-white max-w-xs w-full p-4 rounded-2xl shadow-2xl border border-slate-200 text-center space-y-2.5">
+            <div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-lg font-bold">
+              🔒
+            </div>
+            <h4 className="text-sm font-black text-slate-900">Protected Admin Action</h4>
+            <p className="text-[11px] text-slate-500">Enter Security PIN to permanently delete invoice <strong>{deleteTargetInv}</strong>.</p>
+            
+            <input
+              type="password"
+              maxLength="8"
+              className="w-full text-center tracking-widest text-lg font-black bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none focus:border-red-500"
+              placeholder="Enter PIN"
+              value={inputPin}
+              onChange={e => { setInputPin(e.target.value); setPinErrorMessage(''); }}
+              onKeyDown={e => { if (e.key === 'Enter') handleConfirmDelete(); }}
+              autoFocus
+            />
+
+            {pinErrorMessage && <p className="text-[10.5px] font-bold text-red-600">{pinErrorMessage}</p>}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg text-xs transition">
+                Confirm Delete
+              </button>
+              <button
+                onClick={() => { setDeleteTargetInv(null); setInputPin(''); setPinErrorMessage(''); }}
+                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-xs transition">
+                Cancel
+              </button>
+            </div>
+            <p className="text-[9.5px] text-slate-400">Default PIN: <strong>8508</strong></p>
+          </div>
+        </div>
+      )}
+
+      {/* CHANGE SECURITY PIN MODAL */}
+      {showChangePinModal && (
+        <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-3 z-50 no-print">
+          <div className="bg-white max-w-xs w-full p-4 rounded-2xl shadow-2xl border border-slate-200 text-center space-y-3">
+            <div className="w-10 h-10 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto text-lg font-bold">
+              🔐
+            </div>
+            <h4 className="text-sm font-black text-slate-900">Change Admin PIN</h4>
+            <p className="text-[11px] text-slate-500">Current PIN: <strong>{adminPin}</strong>. Set a new secret code to protect bill deletions.</p>
+            
+            <input
+              type="text"
+              maxLength="8"
+              className="w-full text-center tracking-widest text-lg font-black bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none focus:border-sky-500"
+              placeholder="New 4-8 digit PIN"
+              value={newPinInput}
+              onChange={e => setNewPinInput(e.target.value)}
+              autoFocus
+            />
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleSaveNewPin}
+                className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 rounded-lg text-xs transition">
+                Save New PIN
+              </button>
+              <button
+                onClick={() => { setShowChangePinModal(false); setNewPinInput(''); }}
+                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-xs transition">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1392,7 +1614,7 @@ function App() {
                   <div>No: <strong className="text-slate-900">{auditPreviewInvoice.invNo}</strong></div>
                   <div>Date: {auditPreviewInvoice.date}</div>
                   <div>Proprietor: M. KANAGAVEL</div>
-                  <div>Mode: <strong className="text-slate-900">{auditPreviewInvoice.paymentMode}</strong></div>
+                  <div>Payment Mode: <strong className="text-slate-900">{auditPreviewInvoice.paymentMode}</strong></div>
                 </div>
               </div>
 
@@ -1443,7 +1665,7 @@ function App() {
                     <span>₹{(auditPreviewInvoice.netPayable || 0).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between text-slate-700 font-semibold">
-                    <span>Mode:</span>
+                    <span>Payment Mode:</span>
                     <span>{auditPreviewInvoice.paymentMode}</span>
                   </div>
                   <div className="flex justify-between text-emerald-700 font-bold">
