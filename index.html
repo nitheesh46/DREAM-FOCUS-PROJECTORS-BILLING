@@ -38,7 +38,7 @@
       }
     }
     .desktop-canvas {
-      min-width: 820px;
+      min-width: 840px;
     }
   </style>
 </head>
@@ -48,6 +48,9 @@
 
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
+
+// --- Helper for Time Format (e.g. 09:37 AM) ---
+const getFormattedTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
 // --- Vector Logo ---
 const ProjectorLogo = () => (
@@ -113,16 +116,16 @@ const DigitalSignature = () => (
   </div>
 );
 
-// Starter Seed Records
+// Starter Seed Records (with Date and Time)
 const DEFAULT_RECORDS = [
   {
-    invNo: "DFP/2026/1012", date: "2026-06-12", custName: "Senthil Nathan", custPhone: "9842100001", custAddr: "KK Nagar, Madurai",
+    invNo: "DFP/2026/1012", date: "2026-06-12", time: "10:15 AM", custName: "Senthil Nathan", custPhone: "9842100001", custAddr: "KK Nagar, Madurai",
     paymentStatus: "Full Paid", paymentMode: "GPay / PhonePe UPI",
     items: [{ id: 1, desc: "Epson EB-X41 Pre-Owned Projector", category: "Sales Unit", qty: 1, rate: 14000 }],
     grossTotal: 14000, discount: 500, exchange: 0, taxableAmount: 13500, gstRate: 18, cgst: 1215, sgst: 1215, totalTax: 2430, netPayable: 15930, paid: 15930, pending: 0
   },
   {
-    invNo: "DFP/2026/1045", date: "2026-07-20", custName: "Velmurugan Arts Academy", custPhone: "9842100002", custAddr: "Sellur, Madurai",
+    invNo: "DFP/2026/1045", date: "2026-07-20", time: "03:40 PM", custName: "Velmurugan Arts Academy", custPhone: "9842100002", custAddr: "Sellur, Madurai",
     paymentStatus: "Advance Paid", paymentMode: "Bank Transfer / NEFT",
     items: [
       { id: 1, desc: "Sony 5000 Lumens Auditorium Projector", category: "Sales Unit", qty: 1, rate: 24000 },
@@ -143,9 +146,7 @@ const decodeHiddenCreds = (str) => {
 };
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('DFP_USER_SESSION') === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('DFP_USER_SESSION') === 'true');
 
   const savedCreds = useMemo(() => {
     const raw = localStorage.getItem('DFP_HIDDEN_AUTH');
@@ -160,7 +161,8 @@ function App() {
 
   const [tab, setTab] = useState('create');
   const [auditPreviewInvoice, setAuditPreviewInvoice] = useState(null);
-  const [saveToast, setSaveToast] = useState(null); // Visual Confirmation Alert
+  const [saveToast, setSaveToast] = useState(null);
+  const [isEditingLoadedBill, setIsEditingLoadedBill] = useState(false);
   const invoiceRef = useRef(null);
 
   // Security PIN State
@@ -179,10 +181,11 @@ function App() {
   const pieChartInst = useRef(null);
   const modeChartInst = useRef(null);
 
-  // Form State
+  // Form State with Date & Exact Time
   const [billMeta, setBillMeta] = useState({
     invNo: `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`,
     date: new Date().toISOString().slice(0, 10),
+    time: getFormattedTime(),
     custName: '',
     custPhone: '',
     custAddr: '',
@@ -205,7 +208,7 @@ function App() {
 
   // LocalStorage Database
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('DFP_PERFECT_AUDIT_DB');
+    const saved = localStorage.getItem('DFP_TIME_ACCURATE_BILLS_V5');
     return saved ? JSON.parse(saved) : DEFAULT_RECORDS;
   });
 
@@ -213,7 +216,7 @@ function App() {
   const [analyticsMonth, setAnalyticsMonth] = useState('ALL');
 
   useEffect(() => {
-    localStorage.setItem('DFP_PERFECT_AUDIT_DB', JSON.stringify(history));
+    localStorage.setItem('DFP_TIME_ACCURATE_BILLS_V5', JSON.stringify(history));
   }, [history]);
 
   const handleLoginSubmit = (e) => {
@@ -305,10 +308,18 @@ function App() {
   const removeItem = (id) => setItems(items.filter(i => i.id !== id));
   const updateItem = (id, field, val) => setItems(items.map(i => i.id === id ? { ...i, [field]: val } : i));
 
-  // Save Order Record with Visual Confirmation Toast
-  const saveCurrentOrder = (showToastNotice = true) => {
+  // Save Order Record (Existing or New)
+  const saveCurrentOrder = (forceNew = false) => {
+    const finalInvNo = forceNew
+      ? `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`
+      : billMeta.invNo;
+    
+    const finalTime = forceNew || !billMeta.time ? getFormattedTime() : billMeta.time;
+
     const record = {
       ...billMeta,
+      invNo: finalInvNo,
+      time: finalTime,
       items,
       grossTotal,
       discount: Number(pricing.discount) || 0,
@@ -325,18 +336,23 @@ function App() {
     };
 
     setHistory(prev => {
-      const idx = prev.findIndex(p => p.invNo === billMeta.invNo);
+      const idx = prev.findIndex(p => p.invNo === finalInvNo);
       return idx >= 0 ? prev.map((p, i) => i === idx ? record : p) : [record, ...prev];
     });
 
-    if (showToastNotice) {
-      setSaveToast({
-        invNo: record.invNo,
-        custName: record.custName || 'Walk-in Customer',
-        amount: record.netPayable
-      });
-      setTimeout(() => setSaveToast(null), 4000);
+    if (forceNew) {
+      setBillMeta(prev => ({ ...prev, invNo: finalInvNo, time: finalTime }));
+      setIsEditingLoadedBill(false);
     }
+
+    setSaveToast({
+      isNew: forceNew,
+      invNo: record.invNo,
+      time: record.time,
+      custName: record.custName || 'Walk-in Customer',
+      amount: record.netPayable
+    });
+    setTimeout(() => setSaveToast(null), 4000);
 
     return record;
   };
@@ -374,7 +390,7 @@ function App() {
     return `*DREAM FOCUS PROJECTORS - TAX INVOICE*\n` +
       `*Invoice No:* ${record.invNo}\n` +
       `*Customer:* ${record.custName || 'Valued Customer'}\n` +
-      `*Date:* ${record.date}\n` +
+      `*Date:* ${record.date} | *Time:* ${record.time || ''}\n` +
       `--------------------------\n` +
       `*Gross Total:* ₹${record.grossTotal.toLocaleString('en-IN')}\n` +
       (record.discount > 0 ? `*Discount:* -₹${record.discount.toLocaleString('en-IN')}\n` : '') +
@@ -392,17 +408,13 @@ function App() {
       `_Thank you for choosing DREAM FOCUS PROJECTORS! Attached is your bill._`;
   };
 
-  // --- POPUP-BLOCKER-SAFE DIRECT WHATSAPP DISPATCHER ---
   const launchWhatsAppDirect = (phone, text) => {
     const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
     if (!cleanPhone || cleanPhone.length < 10) {
       alert("Please enter a valid 10-digit WhatsApp phone number for the customer!");
       return;
     }
-
     const whatsappUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone}&text=${encodeURIComponent(text)}`;
-    
-    // Synthetic link element bypasses pop-up blockers in Chrome/Safari/Brave
     const a = document.createElement('a');
     a.href = whatsappUrl;
     a.target = '_blank';
@@ -413,14 +425,14 @@ function App() {
   };
 
   const openDirectCustomerWhatsApp = () => {
-    const record = saveCurrentOrder(true);
+    const record = saveCurrentOrder(false);
     const text = buildWhatsAppText(record);
     launchWhatsAppDirect(record.custPhone, text);
   };
 
   // Strictly 1-Page PDF Generator
   const sharePDFDirectly = async () => {
-    const record = saveCurrentOrder(true);
+    const record = saveCurrentOrder(false);
     const invoiceElem = document.getElementById('printable-invoice');
     if (!invoiceElem) return;
 
@@ -452,7 +464,6 @@ function App() {
         a.click();
         URL.revokeObjectURL(url);
 
-        // Directly open WhatsApp after download
         launchWhatsAppDirect(record.custPhone, waMessage);
       }
     } catch (err) {
@@ -492,11 +503,13 @@ function App() {
     setBillMeta({
       invNo: `DFP/2026/${Math.floor(1000 + Math.random() * 9000)}`,
       date: new Date().toISOString().slice(0, 10),
+      time: getFormattedTime(),
       custName: '', custPhone: '', custAddr: '', custGstin: '',
       paymentStatus: 'Advance Paid', paymentMode: 'GPay / PhonePe UPI'
     });
     setItems([{ id: Date.now(), desc: '', category: 'Sales Unit', qty: 1, rate: 0 }]);
     setPricing({ discount: 0, exchange: 0, gstRate: 18, advance: 0 });
+    setIsEditingLoadedBill(false);
   };
 
   const filteredHistory = useMemo(() => {
@@ -635,9 +648,9 @@ function App() {
   }, [tab, monthlyMatrix, kpis, paymentModesMap, filteredHistory, isAuthenticated]);
 
   const exportToCSV = () => {
-    let csv = "Invoice No,Date,Customer Name,Phone,Mode,Taxable Val,GST Rate,Total GST,Net Payable,Paid,Pending Due,Status\n";
+    let csv = "Invoice No,Date,Time,Customer Name,Phone,Mode,Taxable Val,GST Rate,Total GST,Net Payable,Paid,Pending Due,Status\n";
     filteredHistory.forEach(h => {
-      csv += `"${h.invNo}","${h.date}","${h.custName}","${h.custPhone}","${h.paymentMode}",${h.taxableAmount || 0},${h.gstRate || 0},${h.totalTax || 0},${h.netPayable || 0},${h.paid || 0},${h.pending || 0},"${h.paymentStatus}"\n`;
+      csv += `"${h.invNo}","${h.date}","${h.time || ''}","${h.custName}","${h.custPhone}","${h.paymentMode}",${h.taxableAmount || 0},${h.gstRate || 0},${h.totalTax || 0},${h.netPayable || 0},${h.paid || 0},${h.pending || 0},"${h.paymentStatus}"\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -740,8 +753,13 @@ function App() {
         <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white font-bold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-emerald-500 animate-bounce">
           <span className="text-xl">✅</span>
           <div>
-            <div className="text-xs uppercase tracking-wider">Bill Saved Successfully!</div>
-            <div className="text-sm font-black">{saveToast.invNo} • {saveToast.custName} (₹{saveToast.amount.toLocaleString('en-IN')})</div>
+            <div className="text-xs uppercase tracking-wider">
+              {saveToast.isNew ? 'New Bill Created & Saved!' : 'Bill Updated Successfully!'}
+            </div>
+            <div className="text-sm font-black">
+              {saveToast.invNo} • {saveToast.custName} (₹{saveToast.amount.toLocaleString('en-IN')})
+            </div>
+            <div className="text-[10px] text-emerald-200">Time: {saveToast.time}</div>
           </div>
           <button onClick={() => setSaveToast(null)} className="text-white hover:text-slate-200 font-bold ml-2">✕</button>
         </div>
@@ -761,11 +779,22 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isEditingLoadedBill && (
+              <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-md border border-amber-300 animate-pulse">
+                ✏️ Editing: {billMeta.invNo}
+              </span>
+            )}
+            <button
+              onClick={() => saveCurrentOrder(false)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"
+              title="Save current invoice">
+              💾 Save Bill
+            </button>
             <button
               onClick={() => saveCurrentOrder(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"
-              title="Save current invoice into database">
-              💾 Save Bill
+              className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5"
+              title="Save as a separate new invoice with fresh invoice number">
+              ➕ Save as New Bill
             </button>
             <button
               onClick={handleLogout}
@@ -817,7 +846,7 @@ function App() {
               </div>
             </div>
 
-            {/* Meta Grid */}
+            {/* Meta Grid with Date & Time */}
             <div className="grid grid-cols-2 gap-3 bg-slate-50 border border-slate-200 rounded p-2.5 mb-2.5 text-[11px]">
               <div>
                 <h3 className="font-bold text-sky-700 uppercase tracking-wider border-b border-slate-200 pb-0.5 mb-1 text-[10px]">Billed To (Customer Details)</h3>
@@ -840,8 +869,11 @@ function App() {
                   <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Invoice No:</span>
                     <input className="font-bold flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" value={billMeta.invNo} onChange={e => setBillMeta({...billMeta, invNo: e.target.value})} />
                   </div>
-                  <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Date:</span>
-                    <input type="date" className="flex-1 bg-transparent border-b border-slate-200 outline-none text-[11px]" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
+                  {/* Date & Time Row */}
+                  <div className="flex items-center">
+                    <span className="w-24 text-slate-500 font-semibold">Date & Time:</span>
+                    <input type="date" className="w-28 bg-transparent border-b border-slate-200 outline-none text-[11px]" value={billMeta.date} onChange={e => setBillMeta({...billMeta, date: e.target.value})} />
+                    <input type="text" className="w-20 ml-1 bg-transparent border-b border-slate-200 outline-none text-[11px] font-bold text-sky-800" value={billMeta.time || ''} onChange={e => setBillMeta({...billMeta, time: e.target.value})} title="Time of Bill" />
                   </div>
                   <div className="flex items-center"><span className="w-24 text-slate-500 font-semibold">Proprietor:</span>
                     <span className="font-semibold text-slate-800 text-[11px]">M. KANAGAVEL</span>
@@ -1046,11 +1078,14 @@ function App() {
             <button onClick={sharePDFDirectly} className="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 px-4 rounded-lg shadow transition flex items-center justify-center gap-2 text-xs">
               📄 Share 1-Page PDF to WhatsApp
             </button>
-            <button onClick={() => { saveCurrentOrder(true); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-lg shadow transition text-xs">
+            <button onClick={() => { saveCurrentOrder(false); window.print(); }} className="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-lg shadow transition text-xs">
               💾 Save & Print
             </button>
+            <button onClick={() => saveCurrentOrder(true)} className="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-4 rounded-lg shadow transition text-xs">
+              ➕ Save as New Bill
+            </button>
             <button onClick={resetForm} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2.5 px-3.5 rounded-lg transition text-xs">
-              🔄 New Bill
+              🔄 Clear / New Bill
             </button>
           </div>
         </div>
@@ -1210,10 +1245,11 @@ function App() {
                     <div>
                       <div className="font-bold text-slate-800">{c.custName || 'Customer'} <span className="text-slate-400 font-mono text-[10px]">({c.invNo})</span></div>
                       <div className="text-[10.5px] text-red-600 font-black">Due: ₹{Number(c.pending).toLocaleString('en-IN')}</div>
+                      <div className="text-[9px] text-slate-400">Date: {c.date} • Time: {c.time || 'N/A'}</div>
                     </div>
                     <button 
                       onClick={() => {
-                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}*.\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you!`;
+                        const msg = `*PAYMENT REMINDER - DREAM FOCUS PROJECTORS*\nHi ${c.custName || 'Customer'},\nThis is a gentle reminder regarding invoice *${c.invNo}* (${c.date} ${c.time || ''}).\n*Pending Due:* ₹${c.pending}\nPlease transfer via GPay/PhonePe to 8508550847. Thank you!`;
                         launchWhatsAppDirect(c.custPhone, msg);
                       }}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2 py-1 rounded text-[10px] flex items-center gap-1">
@@ -1225,7 +1261,7 @@ function App() {
             )}
           </div>
 
-          {/* Audit Ledger Table */}
+          {/* Audit Ledger Table with Time Column */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3.5">
             <div className="flex justify-between items-center mb-2">
               <div>
@@ -1235,6 +1271,7 @@ function App() {
                     🔒 PIN Protected Delete
                   </span>
                 </h3>
+                <span className="text-[10px] text-slate-500">Exact time included to distinguish orders with the same name and amount.</span>
               </div>
             </div>
             
@@ -1243,7 +1280,7 @@ function App() {
                 <thead className="bg-slate-900 text-white uppercase text-[9.5px]">
                   <tr>
                     <th className="p-1.5">Inv No</th>
-                    <th className="p-1.5">Date</th>
+                    <th className="p-1.5">Date & Time</th>
                     <th className="p-1.5">Customer</th>
                     <th className="p-1.5">Mode</th>
                     <th className="p-1.5 text-right">Taxable</th>
@@ -1258,7 +1295,10 @@ function App() {
                   {filteredHistory.map(item => (
                     <tr key={item.invNo} className="hover:bg-slate-50">
                       <td className="p-1.5 font-bold">{item.invNo}</td>
-                      <td className="p-1.5 text-slate-500">{item.date}</td>
+                      <td className="p-1.5 text-slate-500 whitespace-nowrap">
+                        <div>{item.date}</div>
+                        <div className="text-[10px] text-sky-700 font-bold">{item.time || '10:00 AM'}</div>
+                      </td>
                       <td className="p-1.5 font-semibold">{item.custName || 'Walk-in'}</td>
                       <td className="p-1.5 text-slate-600 font-bold">{item.paymentMode || 'UPI'}</td>
                       <td className="p-1.5 text-right">₹{(item.taxableAmount || 0).toLocaleString('en-IN')}</td>
@@ -1275,12 +1315,19 @@ function App() {
                         <button 
                           onClick={() => {
                             setBillMeta({
-                              invNo: item.invNo, date: item.date, custName: item.custName,
-                              custPhone: item.custPhone, custAddr: item.custAddr, custGstin: item.custGstin || '',
-                              paymentStatus: item.paymentStatus, paymentMode: item.paymentMode || 'GPay / PhonePe UPI'
+                              invNo: item.invNo,
+                              date: item.date,
+                              time: item.time || getFormattedTime(),
+                              custName: item.custName,
+                              custPhone: item.custPhone,
+                              custAddr: item.custAddr,
+                              custGstin: item.custGstin || '',
+                              paymentStatus: item.paymentStatus,
+                              paymentMode: item.paymentMode || 'GPay / PhonePe UPI'
                             });
                             setItems(item.items || []);
                             setPricing({ discount: item.discount, exchange: item.exchange, gstRate: item.gstRate || 18, advance: item.paid });
+                            setIsEditingLoadedBill(true);
                             setTab('create');
                           }}
                           className="text-slate-600 hover:text-slate-900 font-bold px-1 text-[10px] mr-1">
@@ -1387,7 +1434,9 @@ function App() {
             <div className="flex justify-between items-center border-b pb-1.5 mb-2">
               <div>
                 <h3 className="font-black text-slate-900 text-sm">Customer Bill: {auditPreviewInvoice.invNo}</h3>
-                <p className="text-[10px] text-slate-500">{auditPreviewInvoice.custName || 'Walk-in'} | {auditPreviewInvoice.custPhone || 'N/A'}</p>
+                <p className="text-[10px] text-slate-500">
+                  {auditPreviewInvoice.custName || 'Walk-in'} | {auditPreviewInvoice.custPhone || 'N/A'} | Date: {auditPreviewInvoice.date} • Time: {auditPreviewInvoice.time || 'N/A'}
+                </p>
               </div>
               <button onClick={() => setAuditPreviewInvoice(null)} className="text-slate-400 hover:text-slate-700 font-black text-lg p-1">
                 ✕
@@ -1422,7 +1471,7 @@ function App() {
                 <div>
                   <h3 className="font-bold text-sky-700 uppercase tracking-wide border-b border-slate-200 pb-0.5 mb-0.5 text-[9px]">Invoice</h3>
                   <div>No: <strong className="text-slate-900">{auditPreviewInvoice.invNo}</strong></div>
-                  <div>Date: {auditPreviewInvoice.date}</div>
+                  <div>Date & Time: {auditPreviewInvoice.date} • {auditPreviewInvoice.time || ''}</div>
                   <div>Proprietor: M. KANAGAVEL</div>
                   <div>Payment Mode: <strong className="text-slate-900">{auditPreviewInvoice.paymentMode}</strong></div>
                 </div>
@@ -1515,7 +1564,7 @@ function App() {
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded text-xs flex items-center gap-1 shadow">
-                💬 Direct Customer WhatsApp
+                💬 Share 1-Page PDF
               </button>
               <button 
                 onClick={() => printOrShareAuditInvoice(auditPreviewInvoice, false)}
